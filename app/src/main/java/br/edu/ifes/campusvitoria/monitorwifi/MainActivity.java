@@ -59,9 +59,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String DEBUG_TAG = "NetworkStatusExample";
     private ConnectivityManager connMgr;
     private NetworkInfo networkInfo;
-    private SignalStrength      signalStrength;
-    private TelephonyManager    telephonyManager;
-    private final static String LTE_TAG             = "LTE_Tag";
+    private final static String LTE_TAG = "LTE_Tag";
+    private SignalStrength signalStrength;
+    private TelephonyManager telephonyManager;
     private final static String LTE_SIGNAL_STRENGTH = "getLteSignalStrength";
     private final static String GSM_SIGNAL_STRENGTH = "getGSMSignalStrength";
     private int sensibilidadeSinaldBm;
@@ -71,6 +71,83 @@ public class MainActivity extends AppCompatActivity {
     private double latitude;
     private double longitude;
     private List<String> networkSIMs = new ArrayList<>();
+
+    public static List<String> getCellSignalStrength(Context context) {
+        int strength = 0;
+        int j = 0;
+        TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return TODO;
+        }
+        List<CellInfo> cellInfos = telephonyManager.getAllCellInfo();   //This will give info of all sims present inside your mobile
+        List<String> operadoras = new ArrayList<>();
+        if (cellInfos != null && cellInfos.size() > 0) {
+            for (int i = 0; i < cellInfos.size(); i++) {
+                if (cellInfos.get(i) instanceof CellInfoWcdma) {
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        return TODO;
+                    }
+                    CellInfoWcdma cellInfoWcdma = (CellInfoWcdma) telephonyManager.getAllCellInfo().get(0);
+                    CellSignalStrengthWcdma cellSignalStrengthWcdma = cellInfoWcdma.getCellSignalStrength();
+                    strength = cellSignalStrengthWcdma.getDbm();
+                    break;
+                } else if (cellInfos.get(i) instanceof CellInfoGsm) {
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        return TODO;
+                    }
+                    CellInfoGsm cellInfogsm = (CellInfoGsm) telephonyManager.getAllCellInfo().get(j);
+                    j++;
+                    if (cellInfogsm.isRegistered()) {
+                        CellSignalStrengthGsm cellSignalStrengthGsm = cellInfogsm.getCellSignalStrength();
+                        strength = cellSignalStrengthGsm.getDbm();
+                        operadoras.add("GSM;" + cellInfogsm.getCellIdentity().getMnc() + ";" + strength);
+                    }
+
+                } else if (cellInfos.get(i) instanceof CellInfoLte) {
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        return TODO;
+                    }
+                    CellInfoLte cellInfoLte = (CellInfoLte) telephonyManager.getAllCellInfo().get(i);
+                    if (cellInfoLte.isRegistered()) {
+                        CellSignalStrengthLte cellSignalStrengthLte = cellInfoLte.getCellSignalStrength();
+                        strength = cellSignalStrengthLte.getDbm();
+                        operadoras.add("LTE;" + cellInfoLte.getCellIdentity().getMnc() + ";" + strength);
+                    }
+
+                }
+            }
+
+        }
+        return operadoras;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
         imgMAP = (ImageView) findViewById(R.id.imgMAP);
 
         //acessando servico wifi do android
-        wifiManager = (WifiManager)getSystemService(Context.WIFI_SERVICE);
+        wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         connectionInfo = wifiManager.getConnectionInfo();
 
         //dados do mobile
@@ -114,17 +191,20 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
-            public void onStatusChanged(String provider, int status, Bundle extras) {}
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
 
-            public void onProviderEnabled(String provider) {}
+            public void onProviderEnabled(String provider) {
+            }
 
-            public void onProviderDisabled(String provider) {}
+            public void onProviderDisabled(String provider) {
+            }
         };
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-           ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -143,11 +223,9 @@ public class MainActivity extends AppCompatActivity {
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 
         // Listener for the signal strength.
-        final PhoneStateListener mListener = new PhoneStateListener()
-        {
+        final PhoneStateListener mListener = new PhoneStateListener() {
             @Override
-            public void onSignalStrengthsChanged(SignalStrength sStrength)
-            {
+            public void onSignalStrengthsChanged(SignalStrength sStrength) {
                 signalStrength = sStrength;
                 rssiLevel = signalStrength.getLevel();
             }
@@ -160,51 +238,14 @@ public class MainActivity extends AppCompatActivity {
         refreshInformation();
 
     }
+
     @Override
-    public void onResume(){
+    public void onResume() {
         super.onResume();
         refreshInformation();
     }
 
-    public static List<String> getCellSignalStrength(Context context) {
-        int strength = 0;
-        int j=0;
-        TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-        List<CellInfo> cellInfos = telephonyManager.getAllCellInfo();   //This will give info of all sims present inside your mobile
-        List<String> operadoras = new ArrayList<>();
-        if (cellInfos != null && cellInfos.size() > 0) {
-            for (int i = 0; i < cellInfos.size(); i++) {
-                if (cellInfos.get(i) instanceof CellInfoWcdma) {
-                    CellInfoWcdma cellInfoWcdma = (CellInfoWcdma) telephonyManager.getAllCellInfo().get(0);
-                    CellSignalStrengthWcdma cellSignalStrengthWcdma = cellInfoWcdma.getCellSignalStrength();
-                    strength = cellSignalStrengthWcdma.getDbm();
-                    break;
-                } else if (cellInfos.get(i) instanceof CellInfoGsm) {
-                    CellInfoGsm cellInfogsm = (CellInfoGsm) telephonyManager.getAllCellInfo().get(j);
-                    j++;
-                    if (cellInfogsm.isRegistered()) {
-                        CellSignalStrengthGsm cellSignalStrengthGsm = cellInfogsm.getCellSignalStrength();
-                        strength = cellSignalStrengthGsm.getDbm();
-                        operadoras.add("GSM;" + cellInfogsm.getCellIdentity().getMnc() + ";" + strength );
-                    }
-
-                } else if (cellInfos.get(i) instanceof CellInfoLte) {
-                    CellInfoLte cellInfoLte = (CellInfoLte) telephonyManager.getAllCellInfo().get(i);
-                    if (cellInfoLte.isRegistered()) {
-                        CellSignalStrengthLte cellSignalStrengthLte = cellInfoLte.getCellSignalStrength();
-                        strength = cellSignalStrengthLte.getDbm();
-                        operadoras.add("LTE;" + cellInfoLte.getCellIdentity().getMnc() + ";" + strength);
-                    }
-
-                }
-            }
-
-        }
-        return operadoras;
-    }
-
-
-    public void refreshInformation () {
+    public void refreshInformation() {
         NetworkCapabilities networkCapabilities;
         networkInfo = connMgr.getActiveNetworkInfo();
         String redeConectada = "";
@@ -265,7 +306,27 @@ public class MainActivity extends AppCompatActivity {
 
         // Register the listener with the Location Manager to receive location updates
         locationProvider = LocationManager.NETWORK_PROVIDER;
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
         locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
         lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
         // Remove the listener you previously added
         locationManager.removeUpdates(locationListener);
