@@ -34,20 +34,14 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
+@SuppressWarnings("UnusedAssignment")
 public class MainActivity extends AppCompatActivity {
     private WifiManager wifiManager;
     private WifiInfo connectionInfo;
-    private String ipString = new String();
     private TextView textWifiInfo;
     private ImageView imgRSSILevel;
-    private ImageView imgMAP;
-    private String produto;
-    private String modelo;
-    private String fabricante;
-    private String codeName;
-    private int versao;
-    private String realese;
     private String locationProvider;
     private LocationManager locationManager;
     private LocationListener locationListener;
@@ -58,22 +52,17 @@ public class MainActivity extends AppCompatActivity {
     //private final PhoneStateListener phoneStateListener = new PhoneStateListener();
     private static final String DEBUG_TAG = "NetworkStatusExample";
     private ConnectivityManager connMgr;
-    private NetworkInfo networkInfo;
     private final static String LTE_TAG = "LTE_Tag";
     private SignalStrength signalStrength;
-    private TelephonyManager telephonyManager;
     private final static String LTE_SIGNAL_STRENGTH = "getLteSignalStrength";
     private final static String GSM_SIGNAL_STRENGTH = "getGSMSignalStrength";
     private int sensibilidadeSinaldBm;
     private String NetTypeStr;
     private int rssiLevel;
-    private String BSSID;
-    private double latitude;
-    private double longitude;
     private List<String> networkSIMs = new ArrayList<>();
 
-    public static List<String> getCellSignalStrength(Context context) {
-        int strength = 0;
+    private static List<String> getCellSignalStrength(Context context) {
+        int strength;
         int j = 0;
         TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -86,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
             // for ActivityCompat#requestPermissions for more details.
             return TODO;
         }
-        List<CellInfo> cellInfos = telephonyManager.getAllCellInfo();   //This will give info of all sims present inside your mobile
+        List<CellInfo> cellInfos = Objects.requireNonNull(telephonyManager).getAllCellInfo();   //This will give info of all sims present inside your mobile
         List<String> operadoras = new ArrayList<>();
         if (cellInfos != null && cellInfos.size() > 0) {
             for (int i = 0; i < cellInfos.size(); i++) {
@@ -153,8 +142,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        textWifiInfo = (TextView) findViewById(R.id.wifiinfo);
-        Button btnRefresh = (Button) findViewById(R.id.btnRefresh);
+        textWifiInfo = findViewById(R.id.wifiinfo);
+        Button btnRefresh = findViewById(R.id.btnRefresh);
         btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -162,22 +151,22 @@ public class MainActivity extends AppCompatActivity {
                 refreshInformation();
             }
         });
-        imgRSSILevel = (ImageView) findViewById(R.id.imgRSSILevel);
-        imgMAP = (ImageView) findViewById(R.id.imgMAP);
+        imgRSSILevel = findViewById(R.id.imgRSSILevel);
+        ImageView imgMAP = findViewById(R.id.imgMAP);
 
         //acessando servico wifi do android
-        wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-        connectionInfo = wifiManager.getConnectionInfo();
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        connectionInfo = Objects.requireNonNull(wifiManager).getConnectionInfo();
 
         //dados do mobile
-        produto = Build.PRODUCT;
-        modelo = Build.MODEL;
-        fabricante = Build.MANUFACTURER;
+        String produto = Build.PRODUCT;
+        String modelo = Build.MODEL;
+        String fabricante = Build.MANUFACTURER;
 
         //dados do android
-        codeName = Build.VERSION.CODENAME;
-        versao = Build.VERSION.SDK_INT;
-        realese = Build.VERSION.RELEASE;
+        String codeName = Build.VERSION.CODENAME;
+        int versao = Build.VERSION.SDK_INT;
+        String realese = Build.VERSION.RELEASE;
 
         //obtendo dados de localizacao
         // Acquire a reference to the system Location Manager
@@ -220,7 +209,7 @@ public class MainActivity extends AppCompatActivity {
 
         connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 
         // Listener for the signal strength.
         final PhoneStateListener mListener = new PhoneStateListener() {
@@ -232,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
         };
 
         // Register the listener for the telephony manager
-        telephonyManager.listen(mListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+        Objects.requireNonNull(telephonyManager).listen(mListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
         networkSIMs = getCellSignalStrength(this);
         //atualizando dados na tela
         refreshInformation();
@@ -245,12 +234,12 @@ public class MainActivity extends AppCompatActivity {
         refreshInformation();
     }
 
-    public void refreshInformation() {
+    private void refreshInformation() {
         NetworkCapabilities networkCapabilities;
-        networkInfo = connMgr.getActiveNetworkInfo();
-        String redeConectada = "";
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+        StringBuilder redeConectada = new StringBuilder();
         String acesso = "";
-        BSSID = connectionInfo.getBSSID();
+        String BSSID = connectionInfo.getBSSID();
         networkCapabilities = connMgr.getNetworkCapabilities(connMgr.getActiveNetwork());
         if (networkCapabilities != null) {
             //identificando em qual rede esta conectado: WIFI ou MOBILE e se possui ou nao acesso à internet
@@ -258,9 +247,9 @@ public class MainActivity extends AppCompatActivity {
                 final int NumOfRSSILevels = 4;
                 rssiLevel = WifiManager.calculateSignalLevel(connectionInfo.getRssi(), NumOfRSSILevels);
                 if (connMgr.getNetworkCapabilities(connMgr.getActiveNetwork()).hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-                    redeConectada = "Wi-Fi " + networkInfo.getExtraInfo() + " com acesso à Internet\n" + "LinkSpeed: " + connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS;
+                    redeConectada = new StringBuilder("Wi-Fi " + networkInfo.getExtraInfo() + " com acesso à Internet\n" + "LinkSpeed: " + connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS);
                 } else {
-                    redeConectada = "Wi-Fi " + networkInfo.getExtraInfo() + " sem acesso à Internet\n" + "LinkSpeed: " + connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS;
+                    redeConectada = new StringBuilder("Wi-Fi " + networkInfo.getExtraInfo() + " sem acesso à Internet\n" + "LinkSpeed: " + connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS);
                 }
             } else {
                 if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
@@ -271,30 +260,30 @@ public class MainActivity extends AppCompatActivity {
                         switch (dados[1]) {
                             case "11":
                                 if (dados[0].equals("GSM")) {
-                                    redeConectada = redeConectada + " Operadora Vivo com tecnologia " + dados[0] + " e sensibilidade de sinal (dBm): " + dados[2];
+                                    redeConectada.append(" Operadora Vivo com tecnologia ").append(dados[0]).append(" e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 } else {
-                                    redeConectada = redeConectada + " Operadora Vivo com tecnologia " + dados[0] + " e acesso à Internet e sensibilidade de sinal (dBm): " + dados[2];
+                                    redeConectada.append(" Operadora Vivo com tecnologia ").append(dados[0]).append(" e acesso à Internet e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 }
                                 break;
                             case ("2"):
                                 if (dados[0].equals("GSM")) {
-                                    redeConectada = redeConectada + " Operadora TIM com tecnologia " + dados[0] + " e sensibilidade de sinal (dBm): " + dados[2];
+                                    redeConectada.append(" Operadora TIM com tecnologia ").append(dados[0]).append(" e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 } else {
-                                    redeConectada = redeConectada + " Operadora TIM com tecnologia " + dados[0] + " e acesso à Internet e sensibilidade de sinal (dBm): " + dados[2];
+                                    redeConectada.append(" Operadora TIM com tecnologia ").append(dados[0]).append(" e acesso à Internet e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 }
                                 break;
                             case ("5"):
                                 if (dados[0].equals("GSM")) {
-                                    redeConectada = redeConectada + " Operadora Claro com tecnologia " + dados[0] + " e sensibilidade de sinal (dBm): " + dados[2];
+                                    redeConectada.append(" Operadora Claro com tecnologia ").append(dados[0]).append(" e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 } else {
-                                    redeConectada = redeConectada + " Operadora Claro com tecnologia " + dados[0] + " e acesso à Internet e sensibilidade de sinal (dBm): " + dados[2];
+                                    redeConectada.append(" Operadora Claro com tecnologia ").append(dados[0]).append(" e acesso à Internet e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 }
                                 break;
                             case ("31"):
                                 if (dados[0].equals("GSM")) {
-                                    redeConectada = redeConectada + " Operadora Oi com tecnologia " + dados[0] + " e sensibilidade de sinal (dBm): " + dados[2];
+                                    redeConectada.append(" Operadora Oi com tecnologia ").append(dados[0]).append(" e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 } else {
-                                    redeConectada = redeConectada + " Operadora Oi com tecnologia " + dados[0] + " e acesso à Internet e sensibilidade de sinal (dBm): " + dados[2];
+                                    redeConectada.append(" Operadora Oi com tecnologia ").append(dados[0]).append(" e acesso à Internet e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 }
                                 break;
                         }
@@ -333,24 +322,24 @@ public class MainActivity extends AppCompatActivity {
 
         //obtendo enderecamento ip da interface wireless
         int ipAddress = connectionInfo.getIpAddress();
-        ipString = String.format("%d.%d.%d.%d",
+        String ipString = String.format("%d.%d.%d.%d",
                 (ipAddress & 0xff),
                 (ipAddress >> 8 & 0xff),
                 (ipAddress >> 16 & 0xff),
                 (ipAddress >> 24 & 0xff));
 
-        latitude = lastKnownLocation.getLatitude();
-        longitude = lastKnownLocation.getLongitude();
+        double latitude = lastKnownLocation.getLatitude();
+        double longitude = lastKnownLocation.getLongitude();
         String strWifiInfo = "";
         strWifiInfo += redeConectada + "\n";
-                //"Nome do Produto: " + produto + "\n" +
-                //"Telefone Modelo: " + modelo + "\n" +
-                //"Fabricante: " + fabricante + "\n" +
-                //"Codename: " + codeName + "\n" +
-                //"API: " + versao + "\n" +
-                //"Release: " + realese + "\n" +
-                //"Latitude: " + lastKnownLocation.getLatitude() + "\n" +
-                //"Longitude: " + lastKnownLocation.getLongitude() + "\n";
+        //"Nome do Produto: " + produto + "\n" +
+        //"Telefone Modelo: " + modelo + "\n" +
+        //"Fabricante: " + fabricante + "\n" +
+        //"Codename: " + codeName + "\n" +
+        //"API: " + versao + "\n" +
+        //"Release: " + realese + "\n" +
+        //"Latitude: " + lastKnownLocation.getLatitude() + "\n" +
+        //"Longitude: " + lastKnownLocation.getLongitude() + "\n";
         textWifiInfo.setText(strWifiInfo);
         //String url = "https://maps.googleapis.com/maps/api/staticmap?center=" + lastKnownLocation.getLatitude() + "," + lastKnownLocation.getLongitude() + "&zoom=17&format=png&sensor=false&size=640x480&maptype=roadmap&key=AIzaSyDgqVrSKjNkSr-D5DZapKQboCAScAOEJnQ";
         //imgMAP.setImageURI(Uri.parse("https://maps.googleapis.com/maps/api/staticmap?center=" + lastKnownLocation.getLatitude() + "," + lastKnownLocation.getLongitude() + "&zoom=17&format=png&sensor=false&size=640x480&maptype=roadmap&key=AIzaSyDgqVrSKjNkSr-D5DZapKQboCAScAOEJnQ"));

@@ -1,5 +1,6 @@
 package br.edu.ifes.campusvitoria.monitorwifi;
 
+import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
@@ -8,8 +9,9 @@ import android.widget.ImageView;
 
 import java.io.InputStream;
 
-public class DownloadStaticMapTask extends AsyncTask<String, Void, Bitmap> {
-    ImageView bmImage;
+@SuppressLint("StaticFieldLeak")
+class DownloadStaticMapTask extends AsyncTask<String, Void, Bitmap> {
+    private final ImageView bmImage;
 
     public DownloadStaticMapTask(ImageView bmImage) {
         this.bmImage = bmImage;
