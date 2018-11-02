@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0099cc"
+    tools:context=".LegalNotesActivity">
+
+    <!-- The primary full-screen view. This can be replaced with whatever view
+         is needed to present your content, e.g. VideoView, SurfaceView,
+         TextureView, etc. -->
+
+    <!-- This FrameLayout insets its children based on system windows using
+         android:fitsSystemWindows. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true">
+
+        <LinearLayout
+            android:id="@+id/fullscreen_content_controls"
+            style="?metaButtonBarStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:background="@color/black_overlay"
+            android:orientation="horizontal"
+            tools:ignore="UselessParent">
+
+            <Button
+                android:id="@+id/btnDiscordo"
+                android:layout_width="105dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="DISCORDO" />
+
+            <Button
+                android:id="@+id/btnCondordo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="CONCORDO" />
+
+        </LinearLayout>
+
+        <EditText
+            android:id="@+id/editText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="false"
+            android:editable="false"
+            android:ems="10"
+            android:enabled="false"
+            android:inputType="textMultiLine"
+            android:linksClickable="false"
+            android:longClickable="false"
+            android:selectAllOnFocus="false"
+            android:singleLine="false"
+            android:soundEffectsEnabled="false"
+            android:text="Os usuários podem utilizar o monitor Wi-Fi do Campus Vitória, sem a necessidade de prover quaisquer dados pessoais. Nosso servidor grava apenas os seguintes dados de conectividade de seu dispositivo móvel: rede wi-fi ou rede móvel celular em que esta conectado, endereço do ponto de acesso conectado, nível de sinal, data e hora da coleta e coordenadas do sistema de localização. Nós avaliamos esses dados para fins estatísticos. A identidade do usuário é sempre mantida anônima. Nenhum dado particular como nome, endereço, número de telefone ou email é salvo ou processado. Não fazemos uso de seu pacote de dados. Os dados coletados não estão acessíveis via Internet e serão transferidos para nossos servidores apenas na rede local do Campus Vitória."
+            android:textAlignment="viewStart"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:typeface="normal" />
+    </FrameLayout>
+
+</FrameLayout>
