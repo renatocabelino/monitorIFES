@@ -14,7 +14,6 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.CellInfo;
 import android.telephony.CellInfoGsm;
@@ -36,7 +35,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-@SuppressWarnings("UnusedAssignment")
 public class MainActivity extends AppCompatActivity {
     private WifiManager wifiManager;
     private WifiInfo connectionInfo;
@@ -153,11 +151,6 @@ public class MainActivity extends AppCompatActivity {
         //obtendo dados de localizacao
         // Acquire a reference to the system Location Manager
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        while (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                    MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
-        }
 
         // Define a listener that responds to location updates
         locationListener = new LocationListener() {
@@ -177,16 +170,6 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        while (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-        }
-        while (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                    MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
-        }
         // Register the listener with the Location Manager to receive location updates
         locationProvider = LocationManager.NETWORK_PROVIDER;
         locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
@@ -216,21 +199,47 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        moveTaskToBack(false);
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
         refreshInformation();
     }
 
     private void refreshInformation() {
+        DataManager dataManager = new DataManager(this);
         NetworkCapabilities networkCapabilities;
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         StringBuilder redeConectada = new StringBuilder();
         String acesso = "";
         String BSSID = connectionInfo.getBSSID();
+        String SSID;
+        String speed;
+        String operadora = "";
+        String rede = "";
+        String rssi = "";
+
+        // Register the listener with the Location Manager to receive location updates
+        locationProvider = LocationManager.NETWORK_PROVIDER;
+
+        locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
+
+        lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
+        // Remove the listener you previously added
+        locationManager.removeUpdates(locationListener);
+        double latitude = lastKnownLocation.getLatitude();
+        double longitude = lastKnownLocation.getLongitude();
+
         networkCapabilities = connMgr.getNetworkCapabilities(connMgr.getActiveNetwork());
         if (networkCapabilities != null) {
             //identificando em qual rede esta conectado: WIFI ou MOBILE e se possui ou nao acesso à internet
             if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                SSID = networkInfo.getExtraInfo();
+                speed = connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS;
                 final int NumOfRSSILevels = 4;
                 rssiLevel = WifiManager.calculateSignalLevel(connectionInfo.getRssi(), NumOfRSSILevels);
                 if (connMgr.getNetworkCapabilities(connMgr.getActiveNetwork()).hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
@@ -238,6 +247,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     redeConectada = new StringBuilder("Wi-Fi " + networkInfo.getExtraInfo() + " sem acesso à Internet\n" + "LinkSpeed: " + connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS);
                 }
+                dataManager.insertWiFi(SSID, BSSID, speed, String.valueOf(latitude), String.valueOf(longitude));
             } else {
                 if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
                     networkSIMs = getCellSignalStrength(this);
@@ -246,60 +256,52 @@ public class MainActivity extends AppCompatActivity {
                         String[] dados = item.split(";");
                         switch (dados[1]) {
                             case "11":
+                                operadora = "Vivo";
                                 if (dados[0].equals("GSM")) {
                                     redeConectada.append(" Operadora Vivo com tecnologia ").append(dados[0]).append(" e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 } else {
                                     redeConectada.append(" Operadora Vivo com tecnologia ").append(dados[0]).append(" e acesso à Internet e sensibilidade de sinal (dBm): ").append(dados[2]);
+                                    rede = dados[0];
+                                    rssi = dados[2];
                                 }
                                 break;
                             case ("2"):
+                                operadora = "TIM";
                                 if (dados[0].equals("GSM")) {
                                     redeConectada.append(" Operadora TIM com tecnologia ").append(dados[0]).append(" e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 } else {
                                     redeConectada.append(" Operadora TIM com tecnologia ").append(dados[0]).append(" e acesso à Internet e sensibilidade de sinal (dBm): ").append(dados[2]);
+                                    rede = dados[0];
+                                    rssi = dados[2];
                                 }
                                 break;
                             case ("5"):
+                                operadora = "Claro";
                                 if (dados[0].equals("GSM")) {
                                     redeConectada.append(" Operadora Claro com tecnologia ").append(dados[0]).append(" e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 } else {
                                     redeConectada.append(" Operadora Claro com tecnologia ").append(dados[0]).append(" e acesso à Internet e sensibilidade de sinal (dBm): ").append(dados[2]);
+                                    rede = dados[0];
+                                    rssi = dados[2];
                                 }
                                 break;
                             case ("31"):
+                                operadora = "Oi";
                                 if (dados[0].equals("GSM")) {
                                     redeConectada.append(" Operadora Oi com tecnologia ").append(dados[0]).append(" e sensibilidade de sinal (dBm): ").append(dados[2]);
                                 } else {
                                     redeConectada.append(" Operadora Oi com tecnologia ").append(dados[0]).append(" e acesso à Internet e sensibilidade de sinal (dBm): ").append(dados[2]);
+                                    rede = dados[0];
+                                    rssi = dados[2];
                                 }
                                 break;
                         }
                     }
+                    dataManager.insertMobile(operadora, rede, rssi, String.valueOf(latitude), String.valueOf(longitude));
                 }
             }
         }
 
-
-        // Register the listener with the Location Manager to receive location updates
-        locationProvider = LocationManager.NETWORK_PROVIDER;
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            while (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-            }
-        }
-        locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            while (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                        MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
-            }
-        }
-        lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
-        // Remove the listener you previously added
-        locationManager.removeUpdates(locationListener);
 
         //obtendo enderecamento ip da interface wireless
         int ipAddress = connectionInfo.getIpAddress();
@@ -309,8 +311,7 @@ public class MainActivity extends AppCompatActivity {
                 (ipAddress >> 16 & 0xff),
                 (ipAddress >> 24 & 0xff));
 
-        double latitude = lastKnownLocation.getLatitude();
-        double longitude = lastKnownLocation.getLongitude();
+
         String strWifiInfo = "";
         strWifiInfo += redeConectada + "\n";
         //"Nome do Produto: " + produto + "\n" +

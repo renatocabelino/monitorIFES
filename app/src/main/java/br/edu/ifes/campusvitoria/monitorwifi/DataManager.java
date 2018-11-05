@@ -1,7 +1,6 @@
 package br.edu.ifes.campusvitoria.monitorwifi;
 
 import android.content.Context;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
@@ -13,8 +12,14 @@ public class DataManager {
         inside and outside this class
     */
     public static final String TABLE_ROW_ID = "_id";
-    public static final String TABLE_ROW_NAME = "name";
-    public static final String TABLE_ROW_AGE = "age";
+    public static final String TABLE_ROW_BSSID = "bssid";
+    public static final String TABLE_ROW_SSID = "ssid";
+    public static final String TABLE_ROW_SPEED = "speed";
+    public static final String TABLE_ROW_OPERADORA = "operadora";
+    public static final String TABLE_ROW_REDE = "rede";
+    public static final String TABLE_ROW_RSSI = "rssi";
+    public static final String TABLE_ROW_LATITUDE = "latitude";
+    public static final String TABLE_ROW_LONGITUDE = "longitude";
     /*
     Next we have a private static final strings for
     each row/table that we need to refer to just
@@ -22,7 +27,8 @@ public class DataManager {
     */
     private static final String DB_NAME = "monitor_wifi_db";
     private static final int DB_VERSION = 1;
-    private static final String TABLE_N_AND_A = "wifi_quality_of_signal_data";
+    private static final String TABLE_WIFI = "t_wifi";
+    private static final String TABLE_MOBILE = "t_mobile";
     // This is the actual database
     private SQLiteDatabase db;
 
@@ -35,42 +41,18 @@ public class DataManager {
     }
 
     // Insert a record
-    public void insert(String name, String age) {
+    public void insertWiFi(String ssid, String bssid, String speed, String latitude, String longitude) {
         // Add all the details to the table
-        String query = String.format("INSERT INTO %s (%s, %s) VALUES ('%s', '%s'null", TABLE_N_AND_A, TABLE_ROW_NAME, TABLE_ROW_AGE, name, age);
+        String query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s');", TABLE_WIFI, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_SPEED, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, ssid, bssid, speed, latitude, longitude);
         Log.i("insert() = ", query);
         db.execSQL(query);
     }
 
-    // Delete a record
-    public void delete(String name) {
-        // Delete the details from the table if already exists
-        String query = "DELETE FROM " + TABLE_N_AND_A +
-                " WHERE " + TABLE_ROW_NAME +
-                " = '" + name + "';";
-        Log.i("delete() = ", query);
+    public void insertMobile(String operadora, String rede, String rssi, String latitude, String longitude) {
+        // Add all the details to the table
+        String query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s) VALUES (%s', '%s', '%s', '%s', '%s');", TABLE_MOBILE, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, operadora, rede, rssi, latitude, longitude);
+        Log.i("insert() = ", query);
         db.execSQL(query);
-    }
-
-    // Get all the records
-    public Cursor selectAll() {
-        Cursor c = db.rawQuery("SELECT *" + " from " +
-                TABLE_N_AND_A, null);
-        return c;
-    }
-
-    // Find a specific record
-    public Cursor searchName(String name) {
-        String query = "SELECT " +
-                TABLE_ROW_ID + ", " +
-                TABLE_ROW_NAME +
-                ", " + TABLE_ROW_AGE +
-                " from " +
-                TABLE_N_AND_A + " WHERE " +
-                TABLE_ROW_NAME + " = '" + name + "';";
-        Log.i("searchName() = ", query);
-        Cursor c = db.rawQuery(query, null);
-        return c;
     }
 
     // This class is created when our DataManager is initialized
@@ -82,16 +64,13 @@ public class DataManager {
         // This method only runs the first time the database is created
         @Override
         public void onCreate(SQLiteDatabase db) {
-            // Create a table for photos and all their details
-            String newTableQueryString = "create table "
-                    + TABLE_N_AND_A + " ("
-                    + TABLE_ROW_ID
-                    + " integer primary key autoincrement not null,"
-                    + TABLE_ROW_NAME
-                    + " text not null,"
-                    + TABLE_ROW_AGE
-                    + " text not null);";
+            // Create a table for wifi data
+            String newTableQueryString = String.format("create table %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_WIFI, TABLE_ROW_ID, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_SPEED, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
             db.execSQL(newTableQueryString);
+            // Create a table for mobile data
+            newTableQueryString = String.format("create table %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_MOBILE, TABLE_ROW_ID, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+            db.execSQL(newTableQueryString);
+
         }
 
         // This method only runs when we increment DB_VERSION

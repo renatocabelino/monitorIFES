@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
@@ -101,6 +102,8 @@ public class LegalNotesActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_legal_notes);
+        //((ActivityManager) this.getSystemService(Context.ACTIVITY_SERVICE)).clearApplicationUserData();
+
 
         mVisible = true;
         mControlsView = findViewById(R.id.fullscreen_content_controls);
@@ -113,6 +116,18 @@ public class LegalNotesActivity extends AppCompatActivity {
         findViewById(R.id.btnDiscordo).setOnTouchListener(mDelayHideTouchListener);
 
         settings = getSharedPreferences(PREFS_NAME, 0);
+        try {
+            PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            if (settings.getInt("VERSION_CODE", 0) != pInfo.versionCode) {
+                SharedPreferences.Editor edit = settings.edit();
+                edit.clear();
+                edit.putInt("VERSION_CODE", pInfo.versionCode);
+                edit.commit();
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+
+        }
 
         if (settings.getBoolean("my_first_time", true)) {
             //the app is being launched for first time, do something
@@ -128,5 +143,11 @@ public class LegalNotesActivity extends AppCompatActivity {
         if (settings.getBoolean("concordo", true)) {
             startActivity(new Intent(LegalNotesActivity.this, MainActivity.class));
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        System.exit(0);
     }
 }
