@@ -1,6 +1,7 @@
 package br.edu.ifes.campusvitoria.monitorwifi;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -13,6 +14,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.CellInfo;
@@ -30,8 +32,11 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -47,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int TWO_MINUTES = 1000 * 60 * 2;
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 0;
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 0;
+    private static final int REQUEST_READ_PHONE_STATE = 1;
+    private static String[] PERMISSIONS_READ_PHONE_STATE = {Manifest.permission.READ_PHONE_STATE};
     //private final PhoneStateListener phoneStateListener = new PhoneStateListener();
     private static final String DEBUG_TAG = "NetworkStatusExample";
     private ConnectivityManager connMgr;
@@ -58,6 +65,10 @@ public class MainActivity extends AppCompatActivity {
     private String NetTypeStr;
     private int rssiLevel;
     private List<String> networkSIMs = new ArrayList<>();
+    private DataManager dataManager;
+    private String macAddress = "";
+    private TelephonyManager telephonyManager;
+    private String imei = "";
 
     private List<String> getCellSignalStrength(Context context) {
         int strength;
@@ -118,11 +129,65 @@ public class MainActivity extends AppCompatActivity {
         return operadoras;
     }
 
+    public static String getMacAddr() {
+        try {
+            List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface nif : all) {
+                if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
+
+                byte[] macBytes = nif.getHardwareAddress();
+                if (macBytes == null) {
+                    return "";
+                }
+
+                StringBuilder res1 = new StringBuilder();
+                for (byte b : macBytes) {
+                    String hex = Integer.toHexString(b & 0xFF);
+                    if (hex.length() == 1)
+                        hex = "0".concat(hex);
+                    res1.append(hex.concat(":"));
+                }
+
+                if (res1.length() > 0) {
+                    res1.deleteCharAt(res1.length() - 1);
+                }
+                return res1.toString();
+            }
+        } catch (Exception ex) {
+        }
+        return "";
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        moveTaskToBack(false);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        refreshInformation();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    @SuppressLint("NewApi")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         textWifiInfo = findViewById(R.id.wifiinfo);
+        dataManager = new DataManager(this);
+        telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        Button btnExportar = findViewById(R.id.btnExportar);
+        btnExportar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String filename_wifi = dataManager.createCSV("t_wifi", macAddress);
+                String filename_mobile = dataManager.createCSV("t_mobile", imei);
+                Toast.makeText(MainActivity.this, String.format("O arquivo foi salvo em: %s e %s", filename_wifi, filename_mobile), Toast.LENGTH_LONG).show();
+            }
+        });
         Button btnRefresh = findViewById(R.id.btnRefresh);
         btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -169,7 +234,11 @@ public class MainActivity extends AppCompatActivity {
             public void onProviderDisabled(String provider) {
             }
         };
-
+        while (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                    MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+        }
         // Register the listener with the Location Manager to receive location updates
         locationProvider = LocationManager.NETWORK_PROVIDER;
         locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
@@ -179,7 +248,6 @@ public class MainActivity extends AppCompatActivity {
 
         connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
 
         // Listener for the signal strength.
         final PhoneStateListener mListener = new PhoneStateListener() {
@@ -198,20 +266,9 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        moveTaskToBack(false);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        refreshInformation();
-    }
-
+    @SuppressLint("NewApi")
     private void refreshInformation() {
-        DataManager dataManager = new DataManager(this);
+
         NetworkCapabilities networkCapabilities;
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         StringBuilder redeConectada = new StringBuilder();
@@ -239,6 +296,7 @@ public class MainActivity extends AppCompatActivity {
             //identificando em qual rede esta conectado: WIFI ou MOBILE e se possui ou nao acesso à internet
             if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
                 SSID = networkInfo.getExtraInfo();
+                macAddress = getMacAddr();
                 speed = connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS;
                 final int NumOfRSSILevels = 4;
                 rssiLevel = WifiManager.calculateSignalLevel(connectionInfo.getRssi(), NumOfRSSILevels);
@@ -247,9 +305,13 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     redeConectada = new StringBuilder("Wi-Fi " + networkInfo.getExtraInfo() + " sem acesso à Internet\n" + "LinkSpeed: " + connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS);
                 }
-                dataManager.insertWiFi(SSID, BSSID, speed, String.valueOf(latitude), String.valueOf(longitude));
+                dataManager.insertWiFi(SSID, BSSID, String.valueOf(rssiLevel), String.valueOf(latitude), String.valueOf(longitude));
             } else {
                 if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                    while (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(MainActivity.this, PERMISSIONS_READ_PHONE_STATE, REQUEST_READ_PHONE_STATE);
+                    }
+                    imei = telephonyManager.getImei();
                     networkSIMs = getCellSignalStrength(this);
                     for (int i = 0; i < networkSIMs.size(); i++) {
                         String item = networkSIMs.get(i);

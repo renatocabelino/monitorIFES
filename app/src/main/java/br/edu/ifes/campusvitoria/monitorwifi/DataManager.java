@@ -1,9 +1,15 @@
 package br.edu.ifes.campusvitoria.monitorwifi;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.net.Uri;
+import android.os.Environment;
 import android.util.Log;
+
+import java.io.File;
+import java.io.FileWriter;
 
 public class DataManager {
     /*
@@ -29,6 +35,9 @@ public class DataManager {
     private static final int DB_VERSION = 1;
     private static final String TABLE_WIFI = "t_wifi";
     private static final String TABLE_MOBILE = "t_mobile";
+
+    private String filename = "";
+
     // This is the actual database
     private SQLiteDatabase db;
 
@@ -50,9 +59,62 @@ public class DataManager {
 
     public void insertMobile(String operadora, String rede, String rssi, String latitude, String longitude) {
         // Add all the details to the table
-        String query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s) VALUES (%s', '%s', '%s', '%s', '%s');", TABLE_MOBILE, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, operadora, rede, rssi, latitude, longitude);
+        String query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s');", TABLE_MOBILE, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, operadora, rede, rssi, latitude, longitude);
         Log.i("insert() = ", query);
         db.execSQL(query);
+    }
+
+    // Get all the records
+    public Cursor selectAll(String table) {
+        Cursor c = db.rawQuery("SELECT *" + " from " + table, null);
+        return c;
+    }
+
+    // metodo para criar o csv
+    public String createCSV(String table_name, String macAddress) {
+        macAddress = macAddress.replaceAll(":", "_");
+        boolean var = true;
+        String state = Environment.getExternalStorageState();
+        //external storage availability check
+        if (!Environment.MEDIA_MOUNTED.equals(state)) {
+            Log.e("monitorWiFi", "Media not mounted.");
+        }
+        File folder = new File(String.valueOf(Environment.getExternalStorageDirectory().getPath()), Environment.DIRECTORY_DOCUMENTS);
+        if (!folder.exists())
+            var = folder.mkdir();
+        if (table_name.equals(TABLE_WIFI)) {
+            filename = folder.toString() + "/" + macAddress + "wifi.csv";
+        } else {
+            if (table_name.equals(TABLE_MOBILE)) {
+                filename = folder.toString() + "/" + macAddress + "mobile.csv";
+            }
+        }
+
+
+        Uri u1 = null;
+
+        Cursor cursor = selectAll(table_name);
+
+
+        try {
+            FileWriter fw = new FileWriter(filename);
+            if (cursor != null) {
+                cursor.moveToFirst();
+                for (int i = 0; i < cursor.getCount(); i++) {
+                    for (int j = 0; j < cursor.getColumnNames().length; j++) {
+                        fw.append(cursor.getString(j) + ";");
+                    }
+                    fw.append("\n");
+
+                    cursor.moveToNext();
+                }
+                cursor.close();
+            }
+            fw.close();
+        } catch (Exception e) {
+            Log.e("monitorWifFi", String.valueOf(e));
+        }
+        return filename;
     }
 
     // This class is created when our DataManager is initialized
@@ -60,15 +122,14 @@ public class DataManager {
         public CustomSQLiteOpenHelper(Context context) {
             super(context, DB_NAME, null, DB_VERSION);
         }
-
         // This method only runs the first time the database is created
         @Override
         public void onCreate(SQLiteDatabase db) {
             // Create a table for wifi data
-            String newTableQueryString = String.format("create table %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_WIFI, TABLE_ROW_ID, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_SPEED, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+            String newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_WIFI, TABLE_ROW_ID, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_SPEED, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
             db.execSQL(newTableQueryString);
             // Create a table for mobile data
-            newTableQueryString = String.format("create table %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_MOBILE, TABLE_ROW_ID, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+            newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_MOBILE, TABLE_ROW_ID, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
             db.execSQL(newTableQueryString);
 
         }

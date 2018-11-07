@@ -40,6 +40,12 @@ public class LegalNotesActivity extends AppCompatActivity {
     final String PREFS_NAME = "moitorWiFi";
     private final Handler mHideHandler = new Handler();
     private SharedPreferences settings;
+
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE};
+
     /**
      * Touch listener to use for in-layout UI controls to delay hiding the
      * system UI. This is to prevent the jarring behavior of controls going away
@@ -51,10 +57,13 @@ public class LegalNotesActivity extends AppCompatActivity {
             switch (view.getId()) {
                 case (R.id.btnCondordo):
                     settings.edit().putBoolean("concordo", true).commit();
-                    while (ActivityCompat.checkSelfPermission(LegalNotesActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                        ActivityCompat.requestPermissions(LegalNotesActivity.this,
-                                new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                                MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+
+                    while (ActivityCompat.checkSelfPermission(LegalNotesActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(
+                                LegalNotesActivity.this,
+                                PERMISSIONS_STORAGE,
+                                REQUEST_EXTERNAL_STORAGE
+                        );
                     }
                     startActivity(new Intent(LegalNotesActivity.this, MainActivity.class));
                     break;
