@@ -18,6 +18,7 @@ public class DataManager {
         inside and outside this class
     */
     public static final String TABLE_ROW_ID = "_id";
+    public static final String TABLE_ROW_TIMESTAMP = "timestamp";
     public static final String TABLE_ROW_BSSID = "bssid";
     public static final String TABLE_ROW_SSID = "ssid";
     public static final String TABLE_ROW_SPEED = "speed";
@@ -50,16 +51,16 @@ public class DataManager {
     }
 
     // Insert a record
-    public void insertWiFi(String ssid, String bssid, String speed, String latitude, String longitude) {
+    public void insertWiFi(String timeStamp, String ssid, String bssid, String speed, String latitude, String longitude) {
         // Add all the details to the table
-        String query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s');", TABLE_WIFI, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_SPEED, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, ssid, bssid, speed, latitude, longitude);
+        String query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s', '%s');", TABLE_WIFI, TABLE_ROW_TIMESTAMP, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_SPEED, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, timeStamp, ssid, bssid, speed, latitude, longitude);
         Log.i("insert() = ", query);
         db.execSQL(query);
     }
 
-    public void insertMobile(String operadora, String rede, String rssi, String latitude, String longitude) {
+    public void insertMobile(String timeStamp, String operadora, String rede, String rssi, String latitude, String longitude) {
         // Add all the details to the table
-        String query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s');", TABLE_MOBILE, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, operadora, rede, rssi, latitude, longitude);
+        String query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s', '%s');", TABLE_MOBILE, TABLE_ROW_TIMESTAMP, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, timeStamp, operadora, rede, rssi, latitude, longitude);
         Log.i("insert() = ", query);
         db.execSQL(query);
     }
@@ -68,6 +69,14 @@ public class DataManager {
     public Cursor selectAll(String table) {
         Cursor c = db.rawQuery("SELECT *" + " from " + table, null);
         return c;
+    }
+
+    //delete all records
+    public void deleteAllRecords(String tableName) {
+        // Add all the details to the table
+        String query = String.format("DELETE from %s;", tableName);
+        Log.i("delete() = ", query);
+        db.execSQL(query);
     }
 
     // metodo para criar o csv
@@ -117,6 +126,29 @@ public class DataManager {
         return filename;
     }
 
+    //delete table
+    public void deleteTable(String tableName) {
+        String newTableQueryString = String.format("drop table %s;", tableName);
+        Log.i("monitorWifi:  ", newTableQueryString);
+        db.execSQL(newTableQueryString);
+    }
+
+    //create table
+    public void createTableWifi(String tableName) {
+        // Create a table for wifi data
+        String newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", tableName, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_SPEED, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+        Log.i("create(): ", newTableQueryString);
+        db.execSQL(newTableQueryString);
+    }
+
+    //create table
+    public void createTableMobile(String tableName) {
+        // Create a table for wifi data
+        String newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", tableName, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+        Log.i("create(): ", newTableQueryString);
+        db.execSQL(newTableQueryString);
+    }
+
     // This class is created when our DataManager is initialized
     private class CustomSQLiteOpenHelper extends SQLiteOpenHelper {
         public CustomSQLiteOpenHelper(Context context) {
@@ -125,11 +157,13 @@ public class DataManager {
         // This method only runs the first time the database is created
         @Override
         public void onCreate(SQLiteDatabase db) {
+
             // Create a table for wifi data
-            String newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_WIFI, TABLE_ROW_ID, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_SPEED, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+            String newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_WIFI, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_SPEED, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+            Log.i("create(): ", newTableQueryString);
             db.execSQL(newTableQueryString);
             // Create a table for mobile data
-            newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_MOBILE, TABLE_ROW_ID, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+            newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_MOBILE, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
             db.execSQL(newTableQueryString);
 
         }

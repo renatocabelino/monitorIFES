@@ -159,12 +159,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        moveTaskToBack(false);
-    }
-
-    @Override
     public void onResume() {
         super.onResume();
         refreshInformation();
@@ -178,6 +172,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         textWifiInfo = findViewById(R.id.wifiinfo);
         dataManager = new DataManager(this);
+        //dataManager.deleteTable("t_mobile");
+        //dataManager.createTableMobile("t_mobile");
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         Button btnExportar = findViewById(R.id.btnExportar);
         btnExportar.setOnClickListener(new View.OnClickListener() {
@@ -186,6 +182,8 @@ public class MainActivity extends AppCompatActivity {
                 String filename_wifi = dataManager.createCSV("t_wifi", macAddress);
                 String filename_mobile = dataManager.createCSV("t_mobile", imei);
                 Toast.makeText(MainActivity.this, String.format("O arquivo foi salvo em: %s e %s", filename_wifi, filename_mobile), Toast.LENGTH_LONG).show();
+                dataManager.deleteAllRecords("t_wifi");
+                dataManager.deleteAllRecords("t_mobile");
             }
         });
         Button btnRefresh = findViewById(R.id.btnRefresh);
@@ -234,13 +232,13 @@ public class MainActivity extends AppCompatActivity {
             public void onProviderDisabled(String provider) {
             }
         };
-        while (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        while (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                    MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
         }
         // Register the listener with the Location Manager to receive location updates
-        locationProvider = LocationManager.NETWORK_PROVIDER;
+        locationProvider = LocationManager.GPS_PROVIDER;
         locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
         lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
         // Remove the listener you previously added
@@ -279,7 +277,13 @@ public class MainActivity extends AppCompatActivity {
         String operadora = "";
         String rede = "";
         String rssi = "";
+        java.util.Date timeStamp = new java.util.Date();
 
+        while (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                    MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+        }
         // Register the listener with the Location Manager to receive location updates
         locationProvider = LocationManager.NETWORK_PROVIDER;
 
@@ -290,7 +294,7 @@ public class MainActivity extends AppCompatActivity {
         locationManager.removeUpdates(locationListener);
         double latitude = lastKnownLocation.getLatitude();
         double longitude = lastKnownLocation.getLongitude();
-
+        timeStamp.getTime();
         networkCapabilities = connMgr.getNetworkCapabilities(connMgr.getActiveNetwork());
         if (networkCapabilities != null) {
             //identificando em qual rede esta conectado: WIFI ou MOBILE e se possui ou nao acesso à internet
@@ -305,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     redeConectada = new StringBuilder("Wi-Fi " + networkInfo.getExtraInfo() + " sem acesso à Internet\n" + "LinkSpeed: " + connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS);
                 }
-                dataManager.insertWiFi(SSID, BSSID, String.valueOf(rssiLevel), String.valueOf(latitude), String.valueOf(longitude));
+                dataManager.insertWiFi(timeStamp.toString(), SSID, BSSID, String.valueOf(rssiLevel), String.valueOf(latitude), String.valueOf(longitude));
             } else {
                 if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
                     while (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
@@ -359,7 +363,7 @@ public class MainActivity extends AppCompatActivity {
                                 break;
                         }
                     }
-                    dataManager.insertMobile(operadora, rede, rssi, String.valueOf(latitude), String.valueOf(longitude));
+                    dataManager.insertMobile(timeStamp.toString(), operadora, rede, rssi, String.valueOf(latitude), String.valueOf(longitude));
                 }
             }
         }
