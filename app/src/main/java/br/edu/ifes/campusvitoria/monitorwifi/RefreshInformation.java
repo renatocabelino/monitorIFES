@@ -113,6 +113,7 @@ public class RefreshInformation extends Service {
 
     @SuppressLint("NewApi")
     private void refreshInformation() {
+        telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         // Acquire a reference to the system Location Manager
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         // Define a listener that responds to location updates
