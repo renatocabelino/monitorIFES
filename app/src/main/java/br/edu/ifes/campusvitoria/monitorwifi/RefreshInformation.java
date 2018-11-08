@@ -101,7 +101,7 @@ public class RefreshInformation extends Service {
             mTimer.cancel();
         else
             mTimer = new Timer();   //recreate new
-        mTimer.scheduleAtFixedRate(new TimeDisplay(), 0, notify);   //Schedule task
+        mTimer.scheduleAtFixedRate(new TimeDisplay(), 0, MainActivity.INTERVALO_COLETA);   //Schedule task
     }
 
     @Override

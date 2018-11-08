@@ -9,11 +9,13 @@ import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.net.NetworkInterface;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -24,6 +26,9 @@ public class MainActivity extends AppCompatActivity {
     private DataManager dataManager;
     private String macAddress = "";
     private TelephonyManager telephonyManager;
+    public static int INTERVALO_COLETA = 30000;
+    private boolean statusColeta = true;
+    private Date hora = new Date();
 
     private static String getMacAddr() {
         try {
@@ -65,22 +70,43 @@ public class MainActivity extends AppCompatActivity {
         btnExportar.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String filename_wifi = dataManager.createCSV("t_wifi", macAddress);
-                String filename_mobile = dataManager.createCSV("t_mobile", macAddress);
+                long horaArquivo = hora.getTime();
+                String filename_wifi = dataManager.createCSV("t_wifi", macAddress + "_" + horaArquivo);
+                String filename_mobile = dataManager.createCSV("t_mobile", macAddress + "_" + horaArquivo);
                 Toast.makeText(MainActivity.this, String.format("O arquivo foi salvo em: %s e %s", filename_wifi, filename_mobile), Toast.LENGTH_LONG).show();
                 dataManager.deleteAllRecords("t_wifi");
                 dataManager.deleteAllRecords("t_mobile");
             }
         });
-        Button btnSair = findViewById(R.id.btnSair);
+        final Button btnSair = findViewById(R.id.btnSair);
         btnSair.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                wifiinfo.setText("Finalizando monitor de conectividade...");
-                stopService(new Intent(MainActivity.this, RefreshInformation.class));
-                finishAndRemoveTask();
+                if (!statusColeta) {
+                    wifiinfo.setText("Monitor de conectividade iniciado.");
+                    startService(new Intent(MainActivity.this, RefreshInformation.class));
+                    btnSair.setText("Parar Coleta");
+                    statusColeta = true;
+                } else {
+                    wifiinfo.setText("Monitor de conectividade finalizado.");
+                    stopService(new Intent(MainActivity.this, RefreshInformation.class));
+                    btnSair.setText("Iniciar Coleta");
+                    statusColeta = false;
+                }
             }
         });
+        final TextView txtInputFreq = findViewById(R.id.inputFreq);
+        ImageButton btnConfirmaFreq = findViewById(R.id.btnConfirmaFreq);
+
+        btnConfirmaFreq.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                stopService(new Intent(MainActivity.this, RefreshInformation.class));
+                INTERVALO_COLETA = Integer.parseInt(("" + txtInputFreq.getText()));
+                startService(new Intent(MainActivity.this, RefreshInformation.class));
+            }
+        });
+
         while (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
@@ -93,5 +119,17 @@ public class MainActivity extends AppCompatActivity {
         wifiinfo.setText("Inicializando monitor de conectividade ...");
         startService(new Intent(this, RefreshInformation.class)); //start service which is MyService.java
         wifiinfo.setText("Monitor de conectividade inicializado.");
+    }
+
+    @Override
+    public void onDestroy() {
+        // First call the "official" version of this method
+        super.onDestroy();
+        long horaArquivo = hora.getTime();
+        String filename_wifi = dataManager.createCSV("t_wifi", macAddress + "_" + horaArquivo);
+        String filename_mobile = dataManager.createCSV("t_mobile", macAddress + "_" + horaArquivo);
+        Toast.makeText(MainActivity.this, String.format("O arquivo foi salvo em: %s e %s", filename_wifi, filename_mobile), Toast.LENGTH_LONG).show();
+        dataManager.deleteAllRecords("t_wifi");
+        dataManager.deleteAllRecords("t_mobile");
     }
 }
