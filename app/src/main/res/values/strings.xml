@@ -3,4 +3,5 @@
     <string name="title_activity_legal_notes">Aviso Legal</string>
     <string name="exportar">Exportar</string>
     <string name="button">Exportar Dados</string>
+    <string name="sair">SAIR</string>
 </resources>
