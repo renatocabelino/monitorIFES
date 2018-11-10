@@ -3,7 +3,11 @@
     <string name="title_activity_legal_notes">Aviso Legal</string>
     <string name="exportar">Exportar</string>
     <string name="button">Exportar Dados</string>
-    <string name="sair">Parar Coleta</string>
+    <string name="sair">Iniciar Coleta</string>
     <string name="par_metros">Parâmetros:</string>
     <string name="frequ_ncia_de_coleta_ms">Frequência de coleta (ms):</string>
+    <string name="textview">TextView</string>
+    <string name="valores_atuais">Valores atuais:</string>
+    <string name="intervalo_entre_coletas">Intervalo entre coletas:</string>
+    <string name="n_mero_de_coletas_realizadas">Número de coletas realizadas:</string>
 </resources>

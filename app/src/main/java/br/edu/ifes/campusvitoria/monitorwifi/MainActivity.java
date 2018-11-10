@@ -1,7 +1,10 @@
 package br.edu.ifes.campusvitoria.monitorwifi;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
@@ -27,8 +30,10 @@ public class MainActivity extends AppCompatActivity {
     private String macAddress = "";
     private TelephonyManager telephonyManager;
     public static int INTERVALO_COLETA = 30000;
-    private boolean statusColeta = true;
+    private boolean statusColeta = false;
     private Date hora = new Date();
+    private MonitorResponseReiver receiver;
+
 
     private static String getMacAddr() {
         try {
@@ -63,6 +68,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        IntentFilter filter = new IntentFilter(MonitorResponseReiver.ACTION_RESP);
+        filter.addCategory(Intent.CATEGORY_DEFAULT);
+        receiver = new MonitorResponseReiver();
+        Intent intent = registerReceiver(receiver, filter);
         dataManager = new DataManager(this);
         macAddress = getMacAddr();
         final TextView wifiinfo = (TextView) findViewById(R.id.wifiinfo);
@@ -76,23 +85,16 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, String.format("O arquivo foi salvo em: %s e %s", filename_wifi, filename_mobile), Toast.LENGTH_LONG).show();
                 dataManager.deleteAllRecords("t_wifi");
                 dataManager.deleteAllRecords("t_mobile");
+                //txtnColetas.setText(String.valueOf(N_COLETAS_REALIZADAS));
             }
         });
         final Button btnSair = findViewById(R.id.btnSair);
         btnSair.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (!statusColeta) {
                     wifiinfo.setText("Monitor de conectividade iniciado.");
-                    startService(new Intent(MainActivity.this, RefreshInformation.class));
-                    btnSair.setText("Parar Coleta");
-                    statusColeta = true;
-                } else {
-                    wifiinfo.setText("Monitor de conectividade finalizado.");
-                    stopService(new Intent(MainActivity.this, RefreshInformation.class));
-                    btnSair.setText("Iniciar Coleta");
-                    statusColeta = false;
-                }
+                Intent monitorIntent = new Intent(MainActivity.this, MonitorIntentService.class);
+                startService(monitorIntent);
             }
         });
         final TextView txtInputFreq = findViewById(R.id.inputFreq);
@@ -101,9 +103,10 @@ public class MainActivity extends AppCompatActivity {
         btnConfirmaFreq.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                stopService(new Intent(MainActivity.this, RefreshInformation.class));
-                INTERVALO_COLETA = Integer.parseInt(("" + txtInputFreq.getText()));
-                startService(new Intent(MainActivity.this, RefreshInformation.class));
+//                stopService(new Intent(MainActivity.this, RefreshInformation.class));
+//                INTERVALO_COLETA = Integer.parseInt(("" + txtInputFreq.getText()));
+//                //txtIntervaloColetas.setText(String.valueOf(INTERVALO_COLETA));
+//                startService(new Intent(MainActivity.this, RefreshInformation.class));
             }
         });
 
@@ -116,20 +119,40 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(MainActivity.this, PERMISSIONS_READ_PHONE_STATE, REQUEST_READ_PHONE_STATE);
         }
 
-        wifiinfo.setText("Inicializando monitor de conectividade ...");
+        /*wifiinfo.setText("Inicializando monitor de conectividade ...");
         startService(new Intent(this, RefreshInformation.class)); //start service which is MyService.java
         wifiinfo.setText("Monitor de conectividade inicializado.");
+        */
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
     }
 
     @Override
     public void onDestroy() {
         // First call the "official" version of this method
         super.onDestroy();
+        unregisterReceiver(receiver);
         long horaArquivo = hora.getTime();
         String filename_wifi = dataManager.createCSV("t_wifi", macAddress + "_" + horaArquivo);
         String filename_mobile = dataManager.createCSV("t_mobile", macAddress + "_" + horaArquivo);
         Toast.makeText(MainActivity.this, String.format("O arquivo foi salvo em: %s e %s", filename_wifi, filename_mobile), Toast.LENGTH_LONG).show();
         dataManager.deleteAllRecords("t_wifi");
         dataManager.deleteAllRecords("t_mobile");
+    }
+
+    public class MonitorResponseReiver extends BroadcastReceiver {
+        public static final String ACTION_RESP =
+                "br.edu.ifes.campusvitoria.monitorwifi.intent.action.MESSAGE_PROCESSED";
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            TextView result = (TextView) findViewById(R.id.wifiinfo);
+            String text = intent.getStringExtra(MonitorIntentService.PARAM_OUT_MSG);
+            result.setText(text);
+        }
     }
 }

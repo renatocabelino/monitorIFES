@@ -23,7 +23,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <service
-            android:name="br.edu.ifes.campusvitoria.monitorwifi.RefreshInformation"
+            android:name="br.edu.ifes.campusvitoria.monitorwifi.MonitorIntentService"
             android:enabled="true"
             android:exported="true"></service>
 

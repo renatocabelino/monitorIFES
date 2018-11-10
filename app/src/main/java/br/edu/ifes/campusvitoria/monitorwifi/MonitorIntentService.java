@@ -1,8 +1,7 @@
 package br.edu.ifes.campusvitoria.monitorwifi;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
-import android.app.Service;
+import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -15,8 +14,7 @@ import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.telephony.CellInfo;
 import android.telephony.CellInfoGsm;
@@ -33,11 +31,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Timer;
-import java.util.TimerTask;
 
-public class RefreshInformation extends Service {
-    public static final int notify = 300000;  //interval between two services(Here Service run every 5 Minute)
+public class MonitorIntentService extends IntentService {
+
+    public static final String PARAM_OUT_MSG = "";
     private final static String LTE_TAG = "LTE_Tag";
     private final static String LTE_SIGNAL_STRENGTH = "getLteSignalStrength";
     private final static String GSM_SIGNAL_STRENGTH = "getGSMSignalStrength";
@@ -56,9 +53,10 @@ public class RefreshInformation extends Service {
     private DataManager dataManager;
     private String macAddress = "";
     private TelephonyManager telephonyManager;
-    private String imei = "";
-    private Handler mHandler = new Handler();   //run on another Thread to avoid crash
-    private Timer mTimer = null;    //timer handling
+
+    public MonitorIntentService() {
+        super("MonitorIntentService");
+    }
 
     private static String getMacAddr() {
         try {
@@ -90,29 +88,19 @@ public class RefreshInformation extends Service {
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-
-    @Override
-    public void onCreate() {
+    protected void onHandleIntent(@Nullable Intent intent) {
         dataManager = new DataManager(this);
-        if (mTimer != null) // Cancel if already existed
-            mTimer.cancel();
-        else
-            mTimer = new Timer();   //recreate new
-        mTimer.scheduleAtFixedRate(new TimeDisplay(), 0, MainActivity.INTERVALO_COLETA);   //Schedule task
-    }
+        Log.i("MonitorServiceIntent: ", "Iniciando tarefa ...");
+        String resultTxt = "";
+        StringBuilder redeConectada = new StringBuilder();
+        String acesso = "";
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        mTimer.cancel();    //For Cancel Timer
-        //Toast.makeText(this, "Service is Destroyed", Toast.LENGTH_SHORT).show();
-    }
-
-    @SuppressLint("NewApi")
-    private void refreshInformation() {
+        String SSID;
+        String speed;
+        String operadora = "";
+        String rede = "";
+        String rssi = "";
+        java.util.Date timeStamp = new java.util.Date();
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         // Acquire a reference to the system Location Manager
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
@@ -136,20 +124,10 @@ public class RefreshInformation extends Service {
         //acessando servico wifi do android
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         connectionInfo = Objects.requireNonNull(wifiManager).getConnectionInfo();
+        String BSSID = connectionInfo.getBSSID();
         connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkCapabilities networkCapabilities;
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        StringBuilder redeConectada = new StringBuilder();
-        String acesso = "";
-        String BSSID = connectionInfo.getBSSID();
-        String SSID;
-        String speed;
-        String operadora = "";
-        String rede = "";
-        String rssi = "";
-        java.util.Date timeStamp = new java.util.Date();
-
-
         // Register the listener with the Location Manager to receive location updates
         locationProvider = LocationManager.NETWORK_PROVIDER;
 
@@ -182,10 +160,9 @@ public class RefreshInformation extends Service {
                 final int NumOfRSSILevels = 4;
                 rssiLevel = WifiManager.calculateSignalLevel(connectionInfo.getRssi(), NumOfRSSILevels);
                 dataManager.insertWiFi(timeStamp.toString(), SSID, BSSID, String.valueOf(rssiLevel), String.valueOf(latitude), String.valueOf(longitude));
-//                MainActivity.N_COLETAS_REALIZADAS ++;
+                resultTxt = "Coleta na rede WIFI realizada em " + timeStamp.toString();
             } else {
                 if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
-                    imei = telephonyManager.getImei();
                     networkSIMs = getCellSignalStrength(this);
                     for (int i = 0; i < networkSIMs.size(); i++) {
                         String item = networkSIMs.get(i);
@@ -216,10 +193,20 @@ public class RefreshInformation extends Service {
                         }
                     }
                     dataManager.insertMobile(timeStamp.toString(), operadora, rede, rssi, String.valueOf(latitude), String.valueOf(longitude));
-//                    MainActivity.N_COLETAS_REALIZADAS ++;
+                    resultTxt = "Coleta na rede WIFI realizada em " + timeStamp.toString();
+                } else {
+                    resultTxt = networkCapabilities.toString();
                 }
             }
+        } else {
+            resultTxt = "NetworkCapability null";
         }
+        Log.i("MonitorIntentService: ", "Finalizando tarefa ...");
+        Intent broadcastIntent = new Intent();
+        broadcastIntent.setAction(MainActivity.MonitorResponseReiver.ACTION_RESP);
+        broadcastIntent.addCategory(Intent.CATEGORY_DEFAULT);
+        broadcastIntent.putExtra(PARAM_OUT_MSG, resultTxt);
+        sendBroadcast(broadcastIntent);
     }
 
     private List<String> getCellSignalStrength(Context context) {
@@ -267,21 +254,4 @@ public class RefreshInformation extends Service {
         }
 
     }
-
-    //class TimeDisplay for handling task
-    class TimeDisplay extends TimerTask {
-        @Override
-        public void run() {
-            // run on another thread
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    // display toast
-                    refreshInformation();
-                }
-            });
-        }
-    }
-
-
 }
