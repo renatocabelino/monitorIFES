@@ -130,7 +130,6 @@ public class MonitorIntentService extends IntentService {
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         // Register the listener with the Location Manager to receive location updates
         locationProvider = LocationManager.NETWORK_PROVIDER;
-
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
@@ -140,13 +139,11 @@ public class MonitorIntentService extends IntentService {
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
             return;
-        } else {
-            locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
+        }
+        locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
             lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
             // Remove the listener you previously added
             locationManager.removeUpdates(locationListener);
-        }
-
         double latitude = lastKnownLocation.getLatitude();
         double longitude = lastKnownLocation.getLongitude();
         timeStamp.getTime();

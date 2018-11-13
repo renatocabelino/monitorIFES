@@ -38,6 +38,7 @@ public class DataManager {
     private static final String TABLE_MOBILE = "t_mobile";
 
     private String filename = "";
+    private CustomSQLiteOpenHelper helper;
 
     // This is the actual database
     private SQLiteDatabase db;
@@ -45,7 +46,7 @@ public class DataManager {
     public DataManager(Context context) {
         // Create an instance of our internal
         //CustomSQLiteOpenHelper class
-        CustomSQLiteOpenHelper helper = new CustomSQLiteOpenHelper(context);
+        helper = new CustomSQLiteOpenHelper(context);
         // Get a writable database
         db = helper.getWritableDatabase();
     }
@@ -147,6 +148,18 @@ public class DataManager {
         String newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", tableName, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
         Log.i("create(): ", newTableQueryString);
         db.execSQL(newTableQueryString);
+    }
+
+    // open db connection
+    public void openDB() {
+        // Get a writable database
+        db = helper.getWritableDatabase();
+    }
+
+    // close db connection
+    public void closeDB() {
+        //db.endTransaction();
+        db.close();
     }
 
     // This class is created when our DataManager is initialized
