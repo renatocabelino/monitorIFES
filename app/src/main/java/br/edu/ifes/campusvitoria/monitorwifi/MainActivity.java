@@ -84,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
         public void handleMessage(Message message) {
             if (message.arg1 == RESULT_OK) {
                 wifiinfo.setText(message.arg2);
-                setAlarmManager();
+                //setAlarmManager();
             }
         }
 
@@ -147,11 +147,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 long horaArquivo = hora.getTime();
+                dataManager.openDB();
                 String filename_wifi = dataManager.createCSV("t_wifi", macAddress + "_" + horaArquivo);
                 String filename_mobile = dataManager.createCSV("t_mobile", macAddress + "_" + horaArquivo);
                 Toast.makeText(MainActivity.this, String.format("O arquivo foi salvo em: %s e %s", filename_wifi, filename_mobile), Toast.LENGTH_LONG).show();
                 dataManager.deleteAllRecords("t_wifi");
                 dataManager.deleteAllRecords("t_mobile");
+                dataManager.closeDB();
                 nColetas = 0;
                 txtColetas.setText("Número de coletas: " + nColetas);
             }
@@ -243,7 +245,7 @@ public class MainActivity extends AppCompatActivity {
             txtColetas.setText("Número de coletas: " + nColetas);
             final PendingIntent pendingIntent;
             pendingIntent = PendingIntent.getService(MainActivity.this, 0, intent, 0);
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC, INTERVALO_COLETA, pendingIntent);
+            //setAlarmManager();
         }
     }
 }

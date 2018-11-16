@@ -9,7 +9,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
-import android.net.NetworkCapabilities;
+import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
@@ -94,13 +94,13 @@ public class MonitorIntentService extends IntentService {
         String resultTxt = "";
         StringBuilder redeConectada = new StringBuilder();
         String acesso = "";
-
         String SSID;
-        String speed;
         String operadora = "";
         String rede = "";
         String rssi = "";
         java.util.Date timeStamp = new java.util.Date();
+        double longitude;
+        double latitude;
         telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         // Acquire a reference to the system Location Manager
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
@@ -126,40 +126,41 @@ public class MonitorIntentService extends IntentService {
         connectionInfo = Objects.requireNonNull(wifiManager).getConnectionInfo();
         String BSSID = connectionInfo.getBSSID();
         connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkCapabilities networkCapabilities;
+        //NetworkCapabilities networkCapabilities;
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         // Register the listener with the Location Manager to receive location updates
         locationProvider = LocationManager.NETWORK_PROVIDER;
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
             return;
-        }
-        locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
+        } else {
+            locationManager.requestLocationUpdates(locationProvider, 0, 0, locationListener);
             lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
             // Remove the listener you previously added
             locationManager.removeUpdates(locationListener);
-        double latitude = lastKnownLocation.getLatitude();
-        double longitude = lastKnownLocation.getLongitude();
+            latitude = lastKnownLocation.getLatitude();
+            longitude = lastKnownLocation.getLongitude();
+        }
         timeStamp.getTime();
-        networkCapabilities = connMgr.getNetworkCapabilities(connMgr.getActiveNetwork());
-        if (networkCapabilities != null) {
-            //identificando em qual rede esta conectado: WIFI ou MOBILE e se possui ou nao acesso à internet
-            if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                SSID = networkInfo.getExtraInfo();
-                macAddress = getMacAddr();
-                speed = connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS;
-                final int NumOfRSSILevels = 4;
-                rssiLevel = WifiManager.calculateSignalLevel(connectionInfo.getRssi(), NumOfRSSILevels);
-                dataManager.insertWiFi(timeStamp.toString(), SSID, BSSID, String.valueOf(rssiLevel), String.valueOf(latitude), String.valueOf(longitude));
-                resultTxt = "Coleta na rede WIFI realizada em " + timeStamp.toString();
-            } else {
-                if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+
+        ConnectivityManager connMgr =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        boolean isWifiConn = networkInfo.isConnected();
+        ;
+        boolean isMobileConn = networkInfo.isConnected();
+        ;
+        for (Network network : connMgr.getAllNetworks()) {
+            if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
+                if (isWifiConn) {
+                    SSID = networkInfo.getExtraInfo();
+                    macAddress = getMacAddr();
+                    final int NumOfRSSILevels = 4;
+                    rssiLevel = WifiManager.calculateSignalLevel(connectionInfo.getRssi(), NumOfRSSILevels);
+                    dataManager.insertWiFi(timeStamp.toString(), SSID, BSSID, String.valueOf(rssiLevel), String.valueOf(latitude), String.valueOf(longitude));
+                    resultTxt = "Coleta na rede WIFI realizada em " + timeStamp.toString();
+                    isWifiConn = false;
+                }
+            } else if (networkInfo.getType() == ConnectivityManager.TYPE_MOBILE) {
+                if (isMobileConn) {
                     networkSIMs = getCellSignalStrength(this);
                     for (int i = 0; i < networkSIMs.size(); i++) {
                         String item = networkSIMs.get(i);
@@ -190,14 +191,64 @@ public class MonitorIntentService extends IntentService {
                         }
                     }
                     dataManager.insertMobile(timeStamp.toString(), operadora, rede, rssi, String.valueOf(latitude), String.valueOf(longitude));
-                    resultTxt = "Coleta na rede WIFI realizada em " + timeStamp.toString();
-                } else {
-                    resultTxt = networkCapabilities.toString();
+                    resultTxt = "Coleta na rede Móvel realizada em " + timeStamp.toString();
+                    isMobileConn = false;
                 }
+
             }
-        } else {
-            resultTxt = "NetworkCapability null";
         }
+
+//        networkCapabilities = connMgr.getNetworkCapabilities(connMgr.getActiveNetwork());
+//        if (networkCapabilities != null) {
+//            //identificando em qual rede esta conectado: WIFI ou MOBILE e se possui ou nao acesso à internet
+//            if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+//                SSID = networkInfo.getExtraInfo();
+//                macAddress = getMacAddr();
+//                speed = connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS;
+//                final int NumOfRSSILevels = 4;
+//                rssiLevel = WifiManager.calculateSignalLevel(connectionInfo.getRssi(), NumOfRSSILevels);
+//                dataManager.insertWiFi(timeStamp.toString(), SSID, BSSID, String.valueOf(rssiLevel), String.valueOf(latitude), String.valueOf(longitude));
+//                resultTxt = "Coleta na rede WIFI realizada em " + timeStamp.toString();
+//            } else {
+//                if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+//                    networkSIMs = getCellSignalStrength(this);
+//                    for (int i = 0; i < networkSIMs.size(); i++) {
+//                        String item = networkSIMs.get(i);
+//                        String[] dados = item.split(";");
+//                        switch (dados[1]) {
+//                            case "11":
+//                                operadora = "Vivo";
+//                                rede = dados[0];
+//                                rssi = dados[2];
+//
+//                                break;
+//                            case ("2"):
+//                                operadora = "TIM";
+//                                rede = dados[0];
+//                                rssi = dados[2];
+//                                break;
+//                            case ("5"):
+//                                operadora = "Claro";
+//
+//                                rede = dados[0];
+//                                rssi = dados[2];
+//                                break;
+//                            case ("31"):
+//                                operadora = "Oi";
+//                                rede = dados[0];
+//                                rssi = dados[2];
+//                                break;
+//                        }
+//                    }
+//                    dataManager.insertMobile(timeStamp.toString(), operadora, rede, rssi, String.valueOf(latitude), String.valueOf(longitude));
+//                    resultTxt = "Coleta na rede WIFI realizada em " + timeStamp.toString();
+//                } else {
+//                    resultTxt = networkCapabilities.toString();
+//                }
+//            }
+//        } else {
+//            resultTxt = "NetworkCapability null";
+//        }
         Log.i("MonitorIntentService: ", "Finalizando tarefa ...");
         Intent broadcastIntent = new Intent();
         broadcastIntent.setAction(MainActivity.MonitorResponseReiver.ACTION_RESP);
