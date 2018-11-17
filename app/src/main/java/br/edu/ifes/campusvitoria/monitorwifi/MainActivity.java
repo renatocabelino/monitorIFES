@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView wifiinfo;
     private TextView txtColetas;
     static int nColetasMobile = 0;
+    static String txtUltimaColeta = "";
     private boolean statusColeta = true;
     private TextView txtColetasMobile;
     private IntentFilter filter;
@@ -141,9 +142,8 @@ public class MainActivity extends AppCompatActivity {
                 dataManager.deleteAllRecords("t_mobile");
                 dataManager.closeDB();
                 nColetasWiFi = 0;
-                txtColetas.setText("Número de coletas: " + nColetasWiFi);
                 nColetasMobile = 0;
-                txtColetasMobile.setText("Número de coletas: " + nColetasMobile);
+                updateInfoColetas();
             }
         });
         final Button btnSair = findViewById(R.id.btnSair);
@@ -176,8 +176,17 @@ public class MainActivity extends AppCompatActivity {
                 setAlarmManager();
             }
         });
+        nColetasMobile = dataManager.countRows("t_mobile");
+        nColetasWiFi = dataManager.countRows("t_wifi");
+        updateInfoColetas();
         alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         setAlarmManager();
+    }
+
+    public void updateInfoColetas() {
+        wifiinfo.setText(txtUltimaColeta);
+        txtColetas.setText("Número de coletas WiFi: " + nColetasWiFi);
+        txtColetasMobile.setText("Número de coletas Mobile: " + nColetasMobile);
     }
 
     @Override
@@ -196,8 +205,7 @@ public class MainActivity extends AppCompatActivity {
     public void onResume() {
         super.onResume();
         registerReceiver(receiver, filter);
-        txtColetas.setText("Número de coletas WiFi: " + nColetasWiFi);
-        txtColetasMobile.setText("Número de coletas Mobile: " + nColetasMobile);
+        updateInfoColetas();
     }
 
     @Override
@@ -234,9 +242,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String text = intent.getStringExtra(MonitorIntentService.PARAM_OUT_MSG);
-            wifiinfo.setText(text);
-            txtColetas.setText("Número de coletas WiFi: " + nColetasWiFi);
-            txtColetasMobile.setText("Número de coletas Mobile: " + nColetasMobile);
+            updateInfoColetas();
         }
     }
 }

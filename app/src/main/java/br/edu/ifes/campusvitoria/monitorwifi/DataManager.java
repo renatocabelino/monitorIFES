@@ -127,6 +127,17 @@ public class DataManager {
         return filename;
     }
 
+    //count number of rows on table
+    public int countRows(String tableName) {
+        String countQueryString = String.format("select count(*) from %s;", tableName);
+        Log.i("monitorWifi:  ", countQueryString);
+        Cursor mCount = db.rawQuery(countQueryString, null);
+        mCount.moveToFirst();
+        int count = mCount.getInt(0);
+        mCount.close();
+        return count;
+    }
+
     //delete table
     public void deleteTable(String tableName) {
         String newTableQueryString = String.format("drop table %s;", tableName);

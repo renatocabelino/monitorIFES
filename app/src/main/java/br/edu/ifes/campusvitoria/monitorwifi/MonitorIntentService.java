@@ -257,6 +257,7 @@ public class MonitorIntentService extends IntentService {
         broadcastIntent.setAction(MainActivity.MonitorResponseReiver.ACTION_RESP);
         broadcastIntent.addCategory(Intent.CATEGORY_DEFAULT);
         broadcastIntent.putExtra(PARAM_OUT_MSG, resultTxt);
+        MainActivity.txtUltimaColeta = resultTxt;
         sendBroadcast(broadcastIntent);
     }
 
