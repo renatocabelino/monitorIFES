@@ -158,6 +158,8 @@ public class MonitorIntentService extends IntentService {
                     dataManager.insertWiFi(timeStamp.toString(), SSID, BSSID, String.valueOf(rssiLevel), String.valueOf(latitude), String.valueOf(longitude));
                     resultTxt = "Coleta na rede WIFI realizada em " + timeStamp.toString();
                     isWifiConn = false;
+                    MainActivity.nColetasWiFi++;
+
                 }
             } else if (networkInfo.getType() == ConnectivityManager.TYPE_MOBILE) {
                 if (isMobileConn) {
@@ -193,6 +195,7 @@ public class MonitorIntentService extends IntentService {
                     dataManager.insertMobile(timeStamp.toString(), operadora, rede, rssi, String.valueOf(latitude), String.valueOf(longitude));
                     resultTxt = "Coleta na rede Móvel realizada em " + timeStamp.toString();
                     isMobileConn = false;
+                    MainActivity.nColetasMobile++;
                 }
 
             }

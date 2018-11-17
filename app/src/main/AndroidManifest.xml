@@ -24,8 +24,10 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <!--<receiver-->
-        <!--android:name="br.edu.ifes.campusvitoria.monitorwifi.MonitorAlarmReceiver"-->
-        <!--android:process=":remote" >-->
+        <!--android:name="br.edu.ifes.campusvitoria.monitorwifi.MainActivity$MonitorResponseReiver"-->
+        <!--android:enabled="true"-->
+        <!--android:process=":remote"-->
+        <!--android:exported="false">-->
         <!--</receiver>-->
         <service
             android:name="br.edu.ifes.campusvitoria.monitorwifi.MonitorIntentService"

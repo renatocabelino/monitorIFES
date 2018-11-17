@@ -12,9 +12,6 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.os.Messenger;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
@@ -27,10 +24,8 @@ import android.widget.Toast;
 
 import java.net.NetworkInterface;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -40,16 +35,18 @@ public class MainActivity extends AppCompatActivity {
     private TelephonyManager telephonyManager;
     private String[] permissions = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_NETWORK_STATE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
-    private boolean statusColeta = false;
+    static int nColetasWiFi = 0;
     private Date hora = new Date();
     private MonitorResponseReiver receiver;
     private PendingIntent pendingIntent;
 
     private AlarmManager alarmManager;
-    private GregorianCalendar calendar;
     private TextView wifiinfo;
     private TextView txtColetas;
-    private int nColetas = 0;
+    static int nColetasMobile = 0;
+    private boolean statusColeta = true;
+    private TextView txtColetasMobile;
+    private IntentFilter filter;
 
     private static String getMacAddr() {
         try {
@@ -79,17 +76,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return "";
     }
-
-    private Handler handler = new Handler() {
-        public void handleMessage(Message message) {
-            if (message.arg1 == RESULT_OK) {
-                wifiinfo.setText(message.arg2);
-                //setAlarmManager();
-            }
-        }
-
-        ;
-    };
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void requestMultiplePermissions() {
@@ -132,12 +118,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         requestMultiplePermissions();
         txtColetas = findViewById(R.id.txtColetas);
-
-        IntentFilter filter = new IntentFilter(MonitorResponseReiver.ACTION_RESP);
+        txtColetasMobile = findViewById(R.id.txtColetasMobile);
+        filter = new IntentFilter(MonitorResponseReiver.ACTION_RESP);
         filter.addCategory(Intent.CATEGORY_DEFAULT);
         receiver = new MonitorResponseReiver();
-        Intent intent = registerReceiver(receiver, filter);
-        intent = new Intent(MainActivity.this, MonitorIntentService.class);
+        Intent intent = new Intent(MainActivity.this, MonitorIntentService.class);
+        registerReceiver(receiver, filter);
         pendingIntent = PendingIntent.getService(MainActivity.this, 0, intent, 0);
         dataManager = new DataManager(this);
         macAddress = getMacAddr();
@@ -154,8 +140,10 @@ public class MainActivity extends AppCompatActivity {
                 dataManager.deleteAllRecords("t_wifi");
                 dataManager.deleteAllRecords("t_mobile");
                 dataManager.closeDB();
-                nColetas = 0;
-                txtColetas.setText("Número de coletas: " + nColetas);
+                nColetasWiFi = 0;
+                txtColetas.setText("Número de coletas: " + nColetasWiFi);
+                nColetasMobile = 0;
+                txtColetasMobile.setText("Número de coletas: " + nColetasMobile);
             }
         });
         final Button btnSair = findViewById(R.id.btnSair);
@@ -188,20 +176,28 @@ public class MainActivity extends AppCompatActivity {
                 setAlarmManager();
             }
         });
-        /*wifiinfo.setText("Inicializando monitor de conectividade ...");
-        startService(new Intent(this, RefreshInformation.class)); //start service which is MyService.java
-        wifiinfo.setText("Monitor de conectividade inicializado.");
-        */
-        calendar = (GregorianCalendar) Calendar.getInstance();
-        Messenger messenger = new Messenger(handler);
         alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
         setAlarmManager();
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+
+    }
+
+    @Override
     public void onPause() {
         super.onPause();
+        unregisterReceiver(receiver);
+    }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        registerReceiver(receiver, filter);
+        txtColetas.setText("Número de coletas WiFi: " + nColetasWiFi);
+        txtColetasMobile.setText("Número de coletas Mobile: " + nColetasMobile);
     }
 
     @Override
@@ -237,15 +233,10 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            TextView result = (TextView) findViewById(R.id.wifiinfo);
             String text = intent.getStringExtra(MonitorIntentService.PARAM_OUT_MSG);
-            result.setText(text);
-            nColetas++;
-            TextView txtColetas = findViewById(R.id.txtColetas);
-            txtColetas.setText("Número de coletas: " + nColetas);
-            final PendingIntent pendingIntent;
-            pendingIntent = PendingIntent.getService(MainActivity.this, 0, intent, 0);
-            //setAlarmManager();
+            wifiinfo.setText(text);
+            txtColetas.setText("Número de coletas WiFi: " + nColetasWiFi);
+            txtColetasMobile.setText("Número de coletas Mobile: " + nColetasMobile);
         }
     }
 }
