@@ -3,7 +3,9 @@
     package="br.edu.ifes.campusvitoria.monitorwifi">
 
     <uses-feature android:name="android.hardware.location.network" />
+    <uses-feature android:name="android.hardware.screen.portrait" />
 
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -23,12 +25,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <!--<receiver-->
-        <!--android:name="br.edu.ifes.campusvitoria.monitorwifi.MainActivity$MonitorResponseReiver"-->
-        <!--android:enabled="true"-->
-        <!--android:process=":remote"-->
-        <!--android:exported="false">-->
-        <!--</receiver>-->
         <service
             android:name="br.edu.ifes.campusvitoria.monitorwifi.MonitorIntentService"
             android:enabled="true"
@@ -36,24 +32,23 @@
 
         </service>
 
-        <activity android:name=".MainActivity">
+        <service
+            android:name="br.edu.ifes.campusvitoria.monitorwifi.WifiIntentService"
+            android:enabled="true"
+            android:exported="false">
+
+        </service>
+
+        <activity
+            android:name=".MainActivity"
+            android:screenOrientation="nosensor">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!--<activity-->
-        <!--android:name=".LegalNotesActivity"-->
-        <!--android:configChanges="orientation|keyboardHidden|screenSize"-->
-        <!--android:label="@string/title_activity_legal_notes"-->
-        <!--android:theme="@style/FullscreenTheme">-->
-        <!--<intent-filter>-->
-        <!--<action android:name="android.intent.action.MAIN" />-->
 
-        <!--<category android:name="android.intent.category.LAUNCHER" />-->
-        <!--</intent-filter>-->
-        <!--</activity>-->
     </application>
 
 </manifest>

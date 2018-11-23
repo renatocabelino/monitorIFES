@@ -10,8 +10,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
@@ -28,26 +31,43 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+import static android.support.v4.content.WakefulBroadcastReceiver.startWakefulService;
+
 public class MainActivity extends AppCompatActivity {
-    public static int INTERVALO_COLETA = 6000;
+    public static int INTERVALO_COLETA = 15000;
+    public static double LATITUDE = 0.0;
+    public static double LONGITUDE = 0.0;
     private DataManager dataManager;
     private String macAddress = "";
     private TelephonyManager telephonyManager;
-    private String[] permissions = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_NETWORK_STATE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
+    static String txtUltimaColeta = "";
     static int nColetasWiFi = 0;
     private Date hora = new Date();
     private MonitorResponseReiver receiver;
     private PendingIntent pendingIntent;
+    protected PendingIntent pendingIntentWifi;
 
     private AlarmManager alarmManager;
     private TextView wifiinfo;
     private TextView txtColetas;
     static int nColetasMobile = 0;
-    static String txtUltimaColeta = "";
+    private String[] permissions = {Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_NETWORK_STATE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.CHANGE_WIFI_STATE,
+            Manifest.permission.ACCESS_WIFI_STATE,
+            Manifest.permission.INTERNET};
     private boolean statusColeta = true;
     private TextView txtColetasMobile;
     private IntentFilter filter;
+    private PowerManager.WakeLock lock;
+    private PowerManager pm;
+    private TextView txtPeriodoColeta;
+    private WifiManager mWifiManager;
+    private WifiScanReceiver receiverWifi;
+    private IntentFilter filterWifi;
 
     private static String getMacAddr() {
         try {
@@ -118,14 +138,30 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         requestMultiplePermissions();
+        pm = (PowerManager) this.getSystemService( Context.POWER_SERVICE );
+        if (pm != null) {
+            lock = pm.newWakeLock( PowerManager.PARTIAL_WAKE_LOCK, "wl:monitorwifi" );
+            lock.acquire();
+        }
         txtColetas = findViewById(R.id.txtColetas);
         txtColetasMobile = findViewById(R.id.txtColetasMobile);
+        txtPeriodoColeta = findViewById( R.id.txtPeriodoColeta );
+
         filter = new IntentFilter(MonitorResponseReiver.ACTION_RESP);
         filter.addCategory(Intent.CATEGORY_DEFAULT);
         receiver = new MonitorResponseReiver();
         Intent intent = new Intent(MainActivity.this, MonitorIntentService.class);
         registerReceiver(receiver, filter);
+
+        filterWifi = new IntentFilter( WifiManager.SCAN_RESULTS_AVAILABLE_ACTION );
+        filterWifi.addCategory( Intent.CATEGORY_DEFAULT );
+        receiverWifi = new WifiScanReceiver();
+        Intent intentWifi = new Intent( MainActivity.this, WifiIntentService.class );
+        registerReceiver( receiverWifi, filterWifi );
+
         pendingIntent = PendingIntent.getService(MainActivity.this, 0, intent, 0);
+        pendingIntentWifi = PendingIntent.getService( MainActivity.this, 0, intentWifi, 0 );
+
         dataManager = new DataManager(this);
         macAddress = getMacAddr();
         wifiinfo = (TextView) findViewById(R.id.wifiinfo);
@@ -174,6 +210,7 @@ public class MainActivity extends AppCompatActivity {
                 alarmManager.cancel(pendingIntent);
                 INTERVALO_COLETA = Integer.parseInt(("" + txtInputFreq.getText()));
                 setAlarmManager();
+                updateInfoColetas();
             }
         });
         nColetasMobile = dataManager.countRows("t_mobile");
@@ -187,6 +224,7 @@ public class MainActivity extends AppCompatActivity {
         wifiinfo.setText(txtUltimaColeta);
         txtColetas.setText("Número de coletas WiFi: " + nColetasWiFi);
         txtColetasMobile.setText("Número de coletas Mobile: " + nColetasMobile);
+        txtPeriodoColeta.setText( "Período de coletas (ms):" + INTERVALO_COLETA );
     }
 
     @Override
@@ -199,12 +237,14 @@ public class MainActivity extends AppCompatActivity {
     public void onPause() {
         super.onPause();
         unregisterReceiver(receiver);
+        unregisterReceiver( receiverWifi );
     }
 
     @Override
     public void onResume() {
         super.onResume();
         registerReceiver(receiver, filter);
+        registerReceiver( receiverWifi, filterWifi );
         updateInfoColetas();
     }
 
@@ -212,7 +252,8 @@ public class MainActivity extends AppCompatActivity {
     public void onDestroy() {
         // First call the "official" version of this method
         super.onDestroy();
-        unregisterReceiver(receiver);
+        lock.release();
+        //unregisterReceiver(receiver);
         long horaArquivo = hora.getTime();
         String filename_wifi = dataManager.createCSV("t_wifi", macAddress + "_" + horaArquivo);
         String filename_mobile = dataManager.createCSV("t_mobile", macAddress + "_" + horaArquivo);
@@ -222,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setAlarmManager() {
-
+//        //long time = System.currentTimeMillis() + INTERVALO_COLETA;
 //        if (Build.VERSION.SDK_INT >= 23) {
 //            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, INTERVALO_COLETA, pendingIntent);
 //        } else {
@@ -233,6 +274,7 @@ public class MainActivity extends AppCompatActivity {
 //            }
 //        }
         alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), INTERVALO_COLETA, pendingIntent);
+        alarmManager.setInexactRepeating( AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), INTERVALO_COLETA, pendingIntentWifi );
     }
 
     public class MonitorResponseReiver extends BroadcastReceiver {
@@ -241,8 +283,37 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            intent.setClass( context, MonitorResponseReiver.class );
             String text = intent.getStringExtra(MonitorIntentService.PARAM_OUT_MSG);
             updateInfoColetas();
+            startWakefulService( context, intent );
+        }
+    }
+
+    public class WifiScanReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            if (intent.getAction().equals( WifiManager.SCAN_RESULTS_AVAILABLE_ACTION )) {
+                mWifiManager = (WifiManager) getApplicationContext().getSystemService( Context.WIFI_SERVICE );
+                List<ScanResult> scanResults = mWifiManager.getScanResults();
+                // Write your logic to show in the list
+                if (!scanResults.isEmpty()) {
+                    for (int i = 0; i < scanResults.size() - 1; i++) {
+                        String item = String.valueOf( scanResults.get( i ) );
+                        String[] valores = item.split( "," );
+                        String[] camposTabela = new String[16];
+                        for (int j = 0; j < valores.length; j++) {
+                            camposTabela[j] = valores[j].substring( valores[j].indexOf( ":" ) + 2 );
+                        }
+                        dataManager.insertWiFi( camposTabela[5], camposTabela[0], camposTabela[1], camposTabela[2], camposTabela[3], camposTabela[4], String.valueOf( LATITUDE ), String.valueOf( LONGITUDE ) );
+                    }
+                    nColetasWiFi++;
+                    updateInfoColetas();
+                }
+            }
+
         }
     }
 }
