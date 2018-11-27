@@ -25,6 +25,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.lang.reflect.Method;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -68,12 +69,13 @@ public class MainActivity extends AppCompatActivity {
     private WifiManager mWifiManager;
     private WifiScanReceiver receiverWifi;
     private IntentFilter filterWifi;
+    private String serial;
 
     private static String getMacAddr() {
         try {
-            List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
+            List<NetworkInterface> all = Collections.list( NetworkInterface.getNetworkInterfaces() );
             for (NetworkInterface nif : all) {
-                if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
+                if (!nif.getName().equalsIgnoreCase( "wlan0" )) continue;
 
                 byte[] macBytes = nif.getHardwareAddress();
                 if (macBytes == null) {
@@ -82,14 +84,14 @@ public class MainActivity extends AppCompatActivity {
 
                 StringBuilder res1 = new StringBuilder();
                 for (byte b : macBytes) {
-                    String hex = Integer.toHexString(b & 0xFF);
+                    String hex = Integer.toHexString( b & 0xFF );
                     if (hex.length() == 1)
-                        hex = "0".concat(hex);
-                    res1.append(hex.concat(":"));
+                        hex = "0".concat( hex );
+                    res1.append( hex.concat( ":" ) );
                 }
 
                 if (res1.length() > 0) {
-                    res1.deleteCharAt(res1.length() - 1);
+                    res1.deleteCharAt( res1.length() - 1 );
                 }
                 return res1.toString();
             }
@@ -102,27 +104,27 @@ public class MainActivity extends AppCompatActivity {
     private void requestMultiplePermissions() {
         List<String> remainingPermissions = new ArrayList<>();
         for (String permission : permissions) {
-            if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
-                remainingPermissions.add(permission);
+            if (checkSelfPermission( permission ) != PackageManager.PERMISSION_GRANTED) {
+                remainingPermissions.add( permission );
             }
         }
         if (!remainingPermissions.isEmpty()) {
-            requestPermissions(remainingPermissions.toArray(new String[remainingPermissions.size()]), 101);
+            requestPermissions( remainingPermissions.toArray( new String[remainingPermissions.size()] ), 101 );
         }
     }
 
     @TargetApi(Build.VERSION_CODES.M)
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        super.onRequestPermissionsResult( requestCode, permissions, grantResults );
         if (requestCode == 101) {
             for (int i = 0; i < grantResults.length; i++) {
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    if (shouldShowRequestPermissionRationale(permissions[i])) {
-                        new AlertDialog.Builder(this)
-                                .setMessage("Your error message here")
-                                .setPositiveButton("Allow", (dialog, which) -> requestMultiplePermissions())
-                                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                    if (shouldShowRequestPermissionRationale( permissions[i] )) {
+                        new AlertDialog.Builder( this )
+                                .setMessage( "Your error message here" )
+                                .setPositiveButton( "Allow", (dialog, which) -> requestMultiplePermissions() )
+                                .setNegativeButton( "Cancel", (dialog, which) -> dialog.dismiss() )
                                 .create()
                                 .show();
                     }
@@ -133,11 +135,41 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public String getSerial() {
+
+        String serialNumber;
+
+        try {
+            Class<?> c = Class.forName( "android.os.SystemProperties" );
+            Method get = c.getMethod( "get", String.class );
+
+            serialNumber = (String) get.invoke( c, "gsm.sn1" );
+            if (serialNumber.equals( "" ))
+                serialNumber = (String) get.invoke( c, "ril.serialnumber" );
+            if (serialNumber.equals( "" ))
+                serialNumber = (String) get.invoke( c, "ro.serialno" );
+            if (serialNumber.equals( "" ))
+                serialNumber = (String) get.invoke( c, "sys.serialnumber" );
+            if (serialNumber.equals( "" ))
+                serialNumber = Build.SERIAL;
+
+            // If none of the methods above worked
+            if (serialNumber.equals( "" ))
+                serialNumber = null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            serialNumber = null;
+        }
+
+        return serialNumber;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         requestMultiplePermissions();
+        serial = getSerial();
         pm = (PowerManager) this.getSystemService( Context.POWER_SERVICE );
         if (pm != null) {
             lock = pm.newWakeLock( PowerManager.PARTIAL_WAKE_LOCK, "wl:monitorwifi" );
@@ -213,6 +245,10 @@ public class MainActivity extends AppCompatActivity {
                 updateInfoColetas();
             }
         });
+//        dataManager.deleteTable( "t_wifi" );
+//        dataManager.deleteTable( "t_mobile" );
+//        dataManager.createTableWifi( "t_wifi" );
+//        dataManager.createTableMobile( "t_mobile" );
         nColetasMobile = dataManager.countRows("t_mobile");
         nColetasWiFi = dataManager.countRows("t_wifi");
         updateInfoColetas();
@@ -307,9 +343,10 @@ public class MainActivity extends AppCompatActivity {
                         for (int j = 0; j < valores.length; j++) {
                             camposTabela[j] = valores[j].substring( valores[j].indexOf( ":" ) + 2 );
                         }
-                        dataManager.insertWiFi( camposTabela[5], camposTabela[0], camposTabela[1], camposTabela[2], camposTabela[3], camposTabela[4], String.valueOf( LATITUDE ), String.valueOf( LONGITUDE ) );
+                        java.util.Date timeStamp = new java.util.Date();
+                        dataManager.insertWiFi( timeStamp.toString(), serial, camposTabela[0], camposTabela[1], camposTabela[2], camposTabela[3], camposTabela[4], String.valueOf( LATITUDE ), String.valueOf( LONGITUDE ) );
                     }
-                    nColetasWiFi++;
+                    nColetasWiFi += scanResults.size() - 1;
                     updateInfoColetas();
                 }
             }

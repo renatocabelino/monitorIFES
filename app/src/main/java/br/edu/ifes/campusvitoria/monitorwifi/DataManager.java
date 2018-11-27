@@ -18,6 +18,7 @@ public class DataManager {
         inside and outside this class
     */
     public static final String TABLE_ROW_ID = "_id";
+    public static final String TABLE_ROW_SERIAL = "serial";
     public static final String TABLE_ROW_TIMESTAMP = "timestamp";
     public static final String TABLE_ROW_BSSID = "bssid";
     public static final String TABLE_ROW_SSID = "ssid";
@@ -27,6 +28,8 @@ public class DataManager {
     public static final String TABLE_ROW_RSSI = "rssi";
     public static final String TABLE_ROW_LATITUDE = "latitude";
     public static final String TABLE_ROW_LONGITUDE = "longitude";
+    private static final String TABLE_ROW_LEVEL = "level";
+    private static final String TABLE_ROW_FREQUENCY = "frequency";
     /*
     Next we have a private static final strings for
     each row/table that we need to refer to just
@@ -36,8 +39,6 @@ public class DataManager {
     private static final int DB_VERSION = 1;
     private static final String TABLE_WIFI = "t_wifi";
     private static final String TABLE_MOBILE = "t_mobile";
-    private static final String TABLE_ROW_LEVEL = "level";
-    private static final String TABLE_ROW_FREQUENCY = "frequency";
 
     private String filename = "";
     private CustomSQLiteOpenHelper helper;
@@ -54,16 +55,16 @@ public class DataManager {
     }
 
     // Insert a record
-    public void insertWiFi(String timeStamp, String ssid, String bssid, String capabilities, String level, String frequency, String latitude, String longitude) {
+    public void insertWiFi(String timeStamp, String serial, String ssid, String bssid, String capabilities, String level, String frequency, String latitude, String longitude) {
         // Add all the details to the table
-        String query = String.format( "INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');", TABLE_WIFI, TABLE_ROW_TIMESTAMP, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_CAPABILITIES, TABLE_ROW_LEVEL, TABLE_ROW_FREQUENCY, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, timeStamp, ssid, bssid, capabilities, level, frequency, latitude, longitude );
+        String query = String.format( "INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');", TABLE_WIFI, TABLE_ROW_TIMESTAMP, TABLE_ROW_SERIAL, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_CAPABILITIES, TABLE_ROW_LEVEL, TABLE_ROW_FREQUENCY, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, timeStamp, serial, ssid, bssid, capabilities, level, frequency, latitude, longitude );
         Log.i("insert() = ", query);
         db.execSQL(query);
     }
 
-    public void insertMobile(String timeStamp, String operadora, String rede, String rssi, String latitude, String longitude) {
+    public void insertMobile(String timeStamp, String serial, String operadora, String rede, String rssi, String latitude, String longitude) {
         // Add all the details to the table
-        String query = String.format("INSERT INTO %s (%s, %s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s', '%s');", TABLE_MOBILE, TABLE_ROW_TIMESTAMP, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, timeStamp, operadora, rede, rssi, latitude, longitude);
+        String query = String.format( "INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s');", TABLE_MOBILE, TABLE_ROW_TIMESTAMP, TABLE_ROW_SERIAL, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE, timeStamp, serial, operadora, rede, rssi, latitude, longitude );
         Log.i("insert() = ", query);
         db.execSQL(query);
     }
@@ -192,7 +193,7 @@ public class DataManager {
     //create table
     public void createTableWifi(String tableName) {
         // Create a table for wifi data
-        String newTableQueryString = String.format( "create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", tableName, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_CAPABILITIES, TABLE_ROW_LEVEL, TABLE_ROW_FREQUENCY, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE );
+        String newTableQueryString = String.format( "create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", tableName, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_SERIAL, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_CAPABILITIES, TABLE_ROW_LEVEL, TABLE_ROW_FREQUENCY, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE );
         Log.i("create(): ", newTableQueryString);
         db.execSQL(newTableQueryString);
     }
@@ -200,7 +201,7 @@ public class DataManager {
     //create table
     public void createTableMobile(String tableName) {
         // Create a table for wifi data
-        String newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", tableName, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+        String newTableQueryString = String.format( "create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", tableName, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_SERIAL, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE );
         Log.i("create(): ", newTableQueryString);
         db.execSQL(newTableQueryString);
     }
@@ -227,11 +228,11 @@ public class DataManager {
         public void onCreate(SQLiteDatabase db) {
 
             // Create a table for wifi data
-            String newTableQueryString = String.format( "create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_WIFI, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_CAPABILITIES, TABLE_ROW_LEVEL, TABLE_ROW_FREQUENCY, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE );
+            String newTableQueryString = String.format( "create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_WIFI, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_SERIAL, TABLE_ROW_SSID, TABLE_ROW_BSSID, TABLE_ROW_CAPABILITIES, TABLE_ROW_LEVEL, TABLE_ROW_FREQUENCY, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE );
             Log.i("create(): ", newTableQueryString);
             db.execSQL(newTableQueryString);
             // Create a table for mobile data
-            newTableQueryString = String.format("create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_MOBILE, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE);
+            newTableQueryString = String.format( "create table if not exists %s (%s integer primary key autoincrement not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null,%s text not null);", TABLE_MOBILE, TABLE_ROW_ID, TABLE_ROW_TIMESTAMP, TABLE_ROW_SERIAL, TABLE_ROW_OPERADORA, TABLE_ROW_REDE, TABLE_ROW_RSSI, TABLE_ROW_LATITUDE, TABLE_ROW_LONGITUDE );
             db.execSQL(newTableQueryString);
 
         }

@@ -13,6 +13,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -26,6 +27,7 @@ import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import java.lang.reflect.Method;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,6 +57,7 @@ public class MonitorIntentService extends IntentService {
     private DataManager dataManager;
     private String macAddress = "";
     private TelephonyManager telephonyManager;
+    private String serial;
 
     public MonitorIntentService() {
         super( "MonitorIntentService" );
@@ -87,6 +90,35 @@ public class MonitorIntentService extends IntentService {
         } catch (Exception ex) {
         }
         return "";
+    }
+
+    public String getSerial() {
+
+        String serialNumber;
+
+        try {
+            Class<?> c = Class.forName( "android.os.SystemProperties" );
+            Method get = c.getMethod( "get", String.class );
+
+            serialNumber = (String) get.invoke( c, "gsm.sn1" );
+            if (serialNumber.equals( "" ))
+                serialNumber = (String) get.invoke( c, "ril.serialnumber" );
+            if (serialNumber.equals( "" ))
+                serialNumber = (String) get.invoke( c, "ro.serialno" );
+            if (serialNumber.equals( "" ))
+                serialNumber = (String) get.invoke( c, "sys.serialnumber" );
+            if (serialNumber.equals( "" ))
+                serialNumber = Build.SERIAL;
+
+            // If none of the methods above worked
+            if (serialNumber.equals( "" ))
+                serialNumber = null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            serialNumber = null;
+        }
+
+        return serialNumber;
     }
 
     @Override
@@ -148,6 +180,7 @@ public class MonitorIntentService extends IntentService {
                 (ConnectivityManager) getSystemService( Context.CONNECTIVITY_SERVICE );
         networkCapabilities = connMgr.getNetworkCapabilities( connMgr.getActiveNetwork() );
         if (networkCapabilities != null) {
+            getSerial();
             //identificando em qual rede esta conectado: WIFI ou MOBILE e se possui ou nao acesso à internet
             if (networkCapabilities.hasTransport( NetworkCapabilities.TRANSPORT_WIFI )) {
 //                SSID = networkInfo.getExtraInfo();
@@ -155,7 +188,7 @@ public class MonitorIntentService extends IntentService {
 //                //speed = connectionInfo.getLinkSpeed() + WifiInfo.LINK_SPEED_UNITS;
 //                final int NumOfRSSILevels = 4;
 //                rssiLevel = WifiManager.calculateSignalLevel( connectionInfo.getRssi(), NumOfRSSILevels );
-//                //dataManager.insertWiFi( timeStamp.toString(), SSID, BSSID, String.valueOf( rssiLevel ), String.valueOf( latitude ), String.valueOf( longitude ) );
+//                //dataManager.insertWiFi( timeStamp.toString(), serial, SSID, BSSID, String.valueOf( rssiLevel ), String.valueOf( latitude ), String.valueOf( longitude ) );
 //                resultTxt = "Coleta na rede WIFI realizada em " + timeStamp.toString();
 //                MainActivity.nColetasWiFi++;
             } else {
@@ -237,7 +270,8 @@ public class MonitorIntentService extends IntentService {
                                 break;
                         }
                     }
-                    dataManager.insertMobile( timeStamp.toString(), operadora, rede, rssi, String.valueOf( latitude ), String.valueOf( longitude ) );
+                    serial = getSerial();
+                    dataManager.insertMobile( timeStamp.toString(), serial, operadora, rede, rssi, String.valueOf( latitude ), String.valueOf( longitude ) );
                     resultTxt = "Coleta na rede Móvel Celular realizada em " + timeStamp.toString();
                     MainActivity.nColetasMobile++;
                 } else {
