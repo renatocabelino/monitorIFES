@@ -171,8 +171,18 @@ public class MonitorIntentService extends IntentService {
             lastKnownLocation = locationManager.getLastKnownLocation( locationProvider );
             // Remove the listener you previously added
             locationManager.removeUpdates( locationListener );
-            latitude = lastKnownLocation.getLatitude();
-            longitude = lastKnownLocation.getLongitude();
+            if (lastKnownLocation != null) {
+                latitude = lastKnownLocation.getLatitude();
+                longitude = lastKnownLocation.getLongitude();
+            } else {
+                locationProvider = LocationManager.GPS_PROVIDER;
+                locationManager.requestLocationUpdates( locationProvider, 0, 0, locationListener );
+                lastKnownLocation = locationManager.getLastKnownLocation( locationProvider );
+                // Remove the listener you previously added
+                locationManager.removeUpdates( locationListener );
+                latitude = lastKnownLocation.getLatitude();
+                longitude = lastKnownLocation.getLongitude();
+            }
         }
         timeStamp.getTime();
 
@@ -271,9 +281,11 @@ public class MonitorIntentService extends IntentService {
                         }
                     }
                     serial = getSerial();
-                    dataManager.insertMobile( timeStamp.toString(), serial, operadora, rede, rssi, String.valueOf( latitude ), String.valueOf( longitude ) );
-                    resultTxt = "Coleta na rede Móvel Celular realizada em " + timeStamp.toString();
-                    MainActivity.nColetasMobile++;
+                    if (dataManager.isDBOpen()) {
+                        dataManager.insertMobile( timeStamp.toString(), serial, operadora, rede, rssi, String.valueOf( latitude ), String.valueOf( longitude ) );
+                        resultTxt = "Coleta na rede Móvel Celular realizada em " + timeStamp.toString();
+                        MainActivity.nColetasMobile++;
+                    }
                 } else {
                     resultTxt = networkCapabilities.toString();
                 }

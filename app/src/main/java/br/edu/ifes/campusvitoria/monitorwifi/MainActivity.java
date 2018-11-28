@@ -224,6 +224,7 @@ public class MainActivity extends AppCompatActivity {
                     statusColeta = false;
                     btnSair.setText("Iniciar Coleta");
                     alarmManager.cancel(pendingIntent);
+                    alarmManager.cancel( pendingIntentWifi );
                     dataManager.closeDB();
                 } else {
                     dataManager.openDB();
@@ -336,18 +337,20 @@ public class MainActivity extends AppCompatActivity {
                 List<ScanResult> scanResults = mWifiManager.getScanResults();
                 // Write your logic to show in the list
                 if (!scanResults.isEmpty()) {
-                    for (int i = 0; i < scanResults.size() - 1; i++) {
-                        String item = String.valueOf( scanResults.get( i ) );
-                        String[] valores = item.split( "," );
-                        String[] camposTabela = new String[16];
-                        for (int j = 0; j < valores.length; j++) {
-                            camposTabela[j] = valores[j].substring( valores[j].indexOf( ":" ) + 2 );
+                    if (dataManager.isDBOpen()) {
+                        for (int i = 0; i < scanResults.size() - 1; i++) {
+                            String item = String.valueOf( scanResults.get( i ) );
+                            String[] valores = item.split( "," );
+                            String[] camposTabela = new String[20];
+                            for (int j = 0; j < valores.length; j++) {
+                                camposTabela[j] = valores[j].substring( valores[j].indexOf( ":" ) + 2 );
+                            }
+                            java.util.Date timeStamp = new java.util.Date();
+                            dataManager.insertWiFi( timeStamp.toString(), serial, camposTabela[0], camposTabela[1], camposTabela[2], camposTabela[3], camposTabela[4], String.valueOf( LATITUDE ), String.valueOf( LONGITUDE ) );
                         }
-                        java.util.Date timeStamp = new java.util.Date();
-                        dataManager.insertWiFi( timeStamp.toString(), serial, camposTabela[0], camposTabela[1], camposTabela[2], camposTabela[3], camposTabela[4], String.valueOf( LATITUDE ), String.valueOf( LONGITUDE ) );
+                        nColetasWiFi += scanResults.size() - 1;
+                        updateInfoColetas();
                     }
-                    nColetasWiFi += scanResults.size() - 1;
-                    updateInfoColetas();
                 }
             }
 

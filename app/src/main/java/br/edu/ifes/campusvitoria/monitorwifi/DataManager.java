@@ -244,4 +244,8 @@ public class DataManager {
                               int oldVersion, int newVersion) {
         }
     }
+
+    public boolean isDBOpen() {
+        return db.isOpen();
+    }
 }
